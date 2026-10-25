@@ -84,6 +84,7 @@ chars: 4821
 | 命令 | 说明 | 示例 |
 | --- | --- | --- |
 | `word-count` | 统计文本文件的字符数、单词数、行数 | `myaitools word-count README.md` |
+| `sys-radar` | 查看本机 CPU、内存使用率与磁盘空间 | `myaitools sys-radar` |
 
 ## 新增一个小工具
 

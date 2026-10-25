@@ -46,6 +46,7 @@ myaitools word-count README.md
 | Command | Description | Example |
 | --- | --- | --- |
 | `word-count` | Count characters, words, and lines in a text file | `myaitools word-count README.md` |
+| `sys-radar` | Show CPU, memory, and disk usage | `myaitools sys-radar` |
 
 ## Adding a tool
 
