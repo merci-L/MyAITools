@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "myaitools"
+dynamic = ["version"]
+description = "一组轻量、可组合的 Python 命令行小工具集"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "merci_L" }]
+keywords = ["cli", "tools", "python", "utilities"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.8",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+myaitools = "myaitools.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/merci-L/MyAITools"
+Repository = "https://github.com/merci-L/MyAITools"
+Issues = "https://github.com/merci-L/MyAITools/issues"
+Changelog = "https://github.com/merci-L/MyAITools/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/myaitools/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/myaitools"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra -q"
+
+[tool.coverage.run]
+source = ["myaitools"]
+branch = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# 本项目的中文文档与提示信息使用全角标点，以下三条规则会误报
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,63 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+wheels/
+*.egg-info/
+.eggs/
+src/*.egg-info/
+.installed.cfg
+*.egg
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+ENV/
+env/
+
+# ---- 测试与覆盖率 ----
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# ---- 类型检查 / 静态工具缓存 ----
+.mypy_cache/
+.pyright/
+.pyre/
+.ruff_cache/
+.cache/
+.ipynb_checkpoints/
+
+# ---- 文档构建 ----
+site/
+docs/_build/
+
+# ---- 编辑器 / IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- 操作系统 ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 本地配置与密钥（绝对不要提交）----
+.env
+.env.*
+!.env.example
+*.local
+secrets/
+*.pem
+*.key
+*.p12

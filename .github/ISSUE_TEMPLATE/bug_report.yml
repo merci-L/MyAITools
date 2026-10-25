@@ -1,0 +1,50 @@
+name: Bug 报告
+description: 报告一个问题，帮助我们改进
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！提交前请先搜索是否已有相同 Issue。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 发生了什么？你期望的结果是什么？
+      placeholder: 运行 `myaitools xxx` 时……，期望……
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 尽量给出可直接复制粘贴的命令
+      placeholder: |
+        1. 执行 `myaitools word-count a.txt`
+        2. 看到报错……
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 操作系统、Python 版本、MyAITools 版本
+      placeholder: |
+        OS: Windows 11
+        Python: 3.14.9
+        MyAITools: 0.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 报错信息
+      description: 粘贴完整的错误堆栈（请先去掉敏感信息）
+      render: shell
+    validations:
+      required: false

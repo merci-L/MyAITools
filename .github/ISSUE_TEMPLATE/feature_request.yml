@@ -1,0 +1,44 @@
+name: 功能建议
+description: 提议一个新工具或改进
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎提议新工具！请说明使用场景，这比描述实现更重要。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题？
+      description: 描述痛点或使用场景
+      placeholder: 我经常需要……，现在只能手动……
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的方案
+      description: 希望的命令、参数、输入输出
+      placeholder: |
+        `myaitools json-format input.json --indent 2`
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 备选方案
+      description: 是否考虑过其他做法？
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 参与意愿
+      options:
+        - label: 我愿意提交 PR 实现这个功能
+          required: false
