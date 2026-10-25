@@ -22,7 +22,8 @@ MyAITools/
 │   └── workflows/ci.yml
 ├── docs/                     # 文档
 │   ├── adding-a-tool.md      # 如何新增一个小工具
-│   └── git-workflow.md       # Git 初始化与开源发布流程
+│   ├── git-workflow.md       # Git 初始化与开源发布流程
+│   └── jd-detector.md        # jd-detector 使用说明
 ├── src/myaitools/            # 唯一的源码包
 │   ├── __init__.py           # 版本号（pyproject 从此处读取）
 │   ├── __main__.py           # 支持 python -m myaitools
@@ -85,6 +86,9 @@ chars: 4821
 | --- | --- | --- |
 | `word-count` | 统计文本文件的字符数、单词数、行数 | `myaitools word-count README.md` |
 | `sys-radar` | 查看本机 CPU、内存使用率与磁盘空间 | `myaitools sys-radar` |
+| `jd-detector` | 调用 DeepSeek API 判断职位描述是否为销售/地推岗位 | `myaitools jd-detector --file jd.txt` |
+
+`jd-detector` 需要先设置环境变量 `DEEPSEEK_API_KEY`，详细用法（输入方式、JSON 输出、退出码、隐私说明）见 [docs/jd-detector.md](docs/jd-detector.md)。
 
 ## 新增一个小工具
 

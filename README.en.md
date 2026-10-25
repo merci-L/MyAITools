@@ -47,6 +47,9 @@ myaitools word-count README.md
 | --- | --- | --- |
 | `word-count` | Count characters, words, and lines in a text file | `myaitools word-count README.md` |
 | `sys-radar` | Show CPU, memory, and disk usage | `myaitools sys-radar` |
+| `jd-detector` | Detect sales / field-promotion job posts via DeepSeek API | `myaitools jd-detector --file jd.txt` |
+
+`jd-detector` requires the `DEEPSEEK_API_KEY` environment variable. See [docs/jd-detector.md](docs/jd-detector.md) for details.
 
 ## Adding a tool
 
