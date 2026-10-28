@@ -5,10 +5,13 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-28
+
 ### 新增
 
 - 新增 `sys-radar` 工具：查看本机 CPU、内存使用率与磁盘空间，支持 `--json` 输出与 `--path` 指定磁盘
 - 新增 `jd-detector` 工具：调用 DeepSeek API 判断职位描述是否为销售/地推岗位，支持文本参数、`--file`、标准输入三种输入方式与 `--json` 输出
+- README 补充 `jd-detector` 的实际运行示例
 
 ### 变更
 
@@ -22,5 +25,6 @@
 - 第一个示例工具 `word-count`：统计文本文件的字符数、单词数与行数
 - 开源配套文档：README（中英双版）、贡献指南、行为准则、Git 工作流教程
 
-[Unreleased]: https://github.com/merci-L/MyAITools/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/merci-L/MyAITools/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/merci-L/MyAITools/releases/tag/v0.2.0
 [0.1.0]: https://github.com/merci-L/MyAITools/releases/tag/v0.1.0

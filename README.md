@@ -90,6 +90,20 @@ chars: 4821
 
 `jd-detector` 需要先设置环境变量 `DEEPSEEK_API_KEY`，详细用法（输入方式、JSON 输出、退出码、隐私说明）见 [docs/jd-detector.md](docs/jd-detector.md)。
 
+### 实际运行示例
+
+`jd-detector` 实际调用 DeepSeek（`deepseek-chat`）的效果：
+
+```powershell
+python -m myaitools jd-detector "招聘地推专员，要求吃苦耐劳，单休，底薪3000，年薪四十万不是梦"
+```
+
+```text
+结论: 是销售/地推岗位
+置信度: 98%
+理由: 职位为地推专员，职责为地面推广拉新获客，属销售/地推岗位。
+```
+
 ## 新增一个小工具
 
 三步即可，详细模板见 [docs/adding-a-tool.md](docs/adding-a-tool.md)：
@@ -110,11 +124,11 @@ pre-commit install      # 安装提交前钩子（只需一次）
 
 ## 开源与发布
 
-- 本地仓库已经初始化（分支 `main`），并有首次提交
+- 仓库已推送到 GitHub，`main` 分支由 CI 保护，历史版本见 [Releases](https://github.com/merci-L/MyAITools/releases)
 - 推送到 GitHub 的完整步骤、分支模型、提交信息规范、打标签与发布流程：见 [docs/git-workflow.md](docs/git-workflow.md)
 - 发布到 PyPI（可选）：`python -m build` 后 `twine upload dist/*`
 
-> 提示：`pyproject.toml` 与本文档里的 `merci-L` 是 GitHub 用户名占位，如果你的用户名不同，请全局替换。
+> 仓库主页：<https://github.com/merci-L/MyAITools>
 
 ## 许可证
 

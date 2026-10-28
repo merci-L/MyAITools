@@ -51,6 +51,20 @@ myaitools word-count README.md
 
 `jd-detector` requires the `DEEPSEEK_API_KEY` environment variable. See [docs/jd-detector.md](docs/jd-detector.md) for details.
 
+### Real-world example
+
+Calling DeepSeek (`deepseek-chat`) on a real job post:
+
+```powershell
+python -m myaitools jd-detector "招聘地推专员，要求吃苦耐劳，单休，底薪3000，年薪四十万不是梦"
+```
+
+```text
+结论: 是销售/地推岗位
+置信度: 98%
+理由: 职位为地推专员，职责为地面推广拉新获客，属销售/地推岗位。
+```
+
 ## Adding a tool
 
 See [docs/adding-a-tool.md](docs/adding-a-tool.md). In short:
