@@ -1,3 +1,7 @@
+[![Release](https://img.shields.io/github/v/release/merci-L/MyAITools?label=release)](https://github.com/merci-L/MyAITools/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/merci-L/MyAITools/ci.yml?branch=main&label=CI)](https://github.com/merci-L/MyAITools/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 # MyAITools
 
 [简体中文](README.md) | [English](README.en.md)
@@ -67,6 +71,12 @@ myaitools word-count README.md
 
 > 国内网络下载依赖慢或超时，可以在安装命令后加清华镜像：
 > `python -m pip install -e ".[dev]" -i https://pypi.tuna.tsinghua.edu.cn/simple`
+
+也可以直接从 GitHub 安装（无需克隆仓库）：
+
+```powershell
+pip install git+https://github.com/merci-L/MyAITools.git
+```
 
 也可以用模块方式运行（无需安装入口脚本）：
 

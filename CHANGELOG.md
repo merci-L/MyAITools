@@ -9,6 +9,10 @@
 
 - 新增 Release 自动发布工作流：推送 `v*` 标签后自动提取 `CHANGELOG.md` 内容创建 GitHub Release
 
+### 文档
+
+- README 增加 Release / CI / License 徽章，并补充从 GitHub 直接安装的说明
+
 ## [0.2.0] - 2026-10-28
 
 ### 新增

@@ -1,3 +1,7 @@
+[![Release](https://img.shields.io/github/v/release/merci-L/MyAITools?label=release)](https://github.com/merci-L/MyAITools/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/merci-L/MyAITools/ci.yml?branch=main&label=CI)](https://github.com/merci-L/MyAITools/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 # MyAITools
 
 [简体中文](README.md) | [English](README.en.md)
@@ -39,6 +43,12 @@ python -m pip install -e ".[dev]"
 
 myaitools --help
 myaitools word-count README.md
+```
+
+Or install directly from GitHub (no clone needed):
+
+```powershell
+pip install git+https://github.com/merci-L/MyAITools.git
 ```
 
 ## Available tools
