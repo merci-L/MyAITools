@@ -27,19 +27,20 @@ def test_app_renders_masthead_tabs_and_buttons() -> None:
     assert not app.exception
     text = _markdown_text(app)
     assert "MYAITOOLS" in text
-    assert "CATALOGUE 002" in text
+    assert "<h1" in text
+    assert "Catalogue 002" in text
     assert [tab.label for tab in app.tabs] == ["系统雷达", "JD 脱水器"]
     assert [button.label for button in app.button] == ["采集读数", "开始脱水"]
 
 
 def test_sys_radar_empty_state() -> None:
     app = _run_app()
-    assert "NO READOUT" in _markdown_text(app)
+    assert "尚无读数" in _markdown_text(app)
 
 
 def test_dark_mode_toggle_switches_palette() -> None:
     app = _run_app()
-    assert "--ground: #efebe1" in _markdown_text(app)
+    assert "--ground: #e8e8e6" in _markdown_text(app)
     app.toggle[0].set_value(True).run()
     assert not app.exception
     assert "--ground: #12100c" in _markdown_text(app)
@@ -53,12 +54,12 @@ def test_sys_radar_button_shows_readout() -> None:
     assert "CPU 使用率" in text
     assert "内存使用率" in text
     assert "磁盘" in text
-    assert "READOUT" in text
+    assert "读数记录" in text
 
 
 def test_jd_detector_empty_state() -> None:
     app = _run_app()
-    assert "NO VERDICT" in _markdown_text(app)
+    assert "尚无判定" in _markdown_text(app)
 
 
 def test_jd_detector_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:

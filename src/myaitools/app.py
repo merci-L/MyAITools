@@ -19,18 +19,18 @@ from myaitools import __version__
 from myaitools.tools import jd_detector, sys_radar
 
 _LIGHT_PALETTE = {
-    "ground": "#efebe1",
-    "sheet": "#f9f6ec",
+    "ground": "#e8e8e6",
+    "sheet": "#f5f5f3",
     "ink": "#20201d",
     "muted": "#676254",
-    "rule": "#d6d0c0",
+    "rule": "#d8d8d5",
     "accent": "#a63d2f",
     "ok": "#4f6b4f",
     "caution": "#9a6b1f",
     "ochre-water": "#b07d2e",
-    "sidebar": "#e9e4d7",
-    "gauge-track": "#e6e0d1",
-    "scrollbar": "#c9c2b0",
+    "sidebar": "#e4e4e1",
+    "gauge-track": "#e3e3e0",
+    "scrollbar": "#c6c6c2",
 }
 
 _DARK_PALETTE = {
@@ -51,8 +51,7 @@ _DARK_PALETTE = {
 _FONT_TOKENS = (
     '  --font-ui: "Segoe UI", "Microsoft YaHei", "PingFang SC", '
     '"Hiragino Sans GB", "Noto Sans SC", sans-serif;\n'
-    '  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, '
-    '"SFMono-Regular", Menlo, "DejaVu Sans Mono", monospace;\n'
+    '  --font-mono: Consolas, "Cascadia Mono", "DejaVu Sans Mono", monospace;\n'
 )
 
 
@@ -68,6 +67,15 @@ _CSS_BODY = """
 html, body, .stApp, [data-testid="stAppViewContainer"] {
   background: var(--ground);
   color: var(--ink);
+  font-family: var(--font-ui);
+}
+[data-testid="stMarkdownContainer"],
+[data-testid="stWidgetLabel"],
+[data-testid="stTab"],
+button,
+input,
+textarea {
+  font-family: var(--font-ui);
 }
 [data-testid="stHeader"] { background: transparent; }
 [data-testid="stToolbar"] { display: flex !important; background: transparent; }
@@ -75,7 +83,17 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   display: none !important;
 }
 [data-testid="stExpandSidebarButton"] { display: flex !important; color: var(--ink) !important; }
-[data-testid="stExpandSidebarButton"] span { color: var(--ink) !important; }
+[data-testid="stExpandSidebarButton"] span { display: none !important; }
+[data-testid="stExpandSidebarButton"]::after {
+  content: "目录";
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink);
+}
+[data-testid="stSidebarHeader"] { display: none !important; }
+[data-testid="stIconMaterial"] { display: none !important; }
+[data-testid="stTextInputRootElement"] button { display: none !important; }
+[data-testid="stTooltipIcon"] { display: none !important; }
 [data-testid="stMainBlockContainer"], [data-testid="stAppViewBlockContainer"] {
   max-width: 1120px;
   padding: 2.4rem 2.6rem 4rem;
@@ -93,26 +111,28 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   justify-content: space-between;
   align-items: flex-end;
   gap: 24px;
-  padding-bottom: 16px;
+  padding-bottom: 18px;
   border-bottom: 1px solid var(--rule);
 }
-.wordmark-row { display: flex; align-items: center; gap: 11px; }
-.tab-mark { width: 9px; height: 9px; background: var(--accent); display: inline-block; }
+.wordmark-row { display: flex; align-items: baseline; gap: 11px; }
+.tab-mark { width: 10px; height: 10px; background: var(--accent); display: inline-block; }
 .wordmark {
-  font-family: var(--font-mono);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: 0.34em;
-  line-height: 1;
+  margin: 0 !important;
+  font-family: var(--font-mono) !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.18em !important;
+  line-height: 1 !important;
+  color: var(--ink) !important;
 }
-.masthead-sub { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+.masthead-sub { margin: 9px 0 0; font-size: 13px; color: var(--muted); }
 .masthead-right {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
   text-align: right;
-  line-height: 1.8;
+  line-height: 1.7;
 }
 
 /* ---------- tabs ---------- */
@@ -129,9 +149,9 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 }
 [data-testid="stTab"] p {
   font-family: var(--font-ui) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
-  letter-spacing: 0.06em !important;
+  letter-spacing: 0.01em !important;
   color: inherit !important;
 }
 [data-testid="stTab"][aria-selected="true"] {
@@ -144,22 +164,22 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   border: 1px solid var(--rule);
   border-top: none;
   border-radius: 0 0 2px 2px;
-  padding: 26px 30px 30px;
-  box-shadow: 0 22px 36px -30px rgba(32, 32, 29, 0.45);
+  padding: 30px 34px 34px;
+  box-shadow: none;
 }
 
 /* ---------- sheet typography ---------- */
 .sheet-title {
-  margin: 0 0 5px;
+  margin: 0 0 6px;
   font-family: var(--font-ui);
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.01em;
   color: var(--ink);
 }
 .sheet-caption {
-  margin: 0 0 22px;
-  font-size: 12.5px;
+  margin: 0 0 24px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--muted);
 }
@@ -173,9 +193,9 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   border-bottom: 1px solid var(--rule);
 }
 .sheet-meta {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 
@@ -184,8 +204,8 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 [data-testid="stBaseButton-secondary"],
 [data-testid="stBaseButton-primary"] {
   font-family: var(--font-ui);
-  font-size: 12px;
-  letter-spacing: 0.12em;
+  font-size: 13px;
+  letter-spacing: 0.02em;
   border-radius: 2px;
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
@@ -227,17 +247,16 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   caret-color: var(--accent);
 }
 [data-testid="stWidgetLabel"] p {
-  font-family: var(--font-mono) !important;
-  font-size: 9.5px !important;
-  letter-spacing: 0.14em !important;
+  font-family: var(--font-ui) !important;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
   color: var(--muted) !important;
-  text-transform: uppercase;
 }
 [data-testid="stBaseButton-primary"] p {
   font-family: var(--font-ui) !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
-  letter-spacing: 0.12em !important;
+  letter-spacing: 0.02em !important;
   color: inherit !important;
 }
 
@@ -263,9 +282,10 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 .unit { margin-left: 2px; font-size: 11px; color: var(--muted); letter-spacing: 0; }
 .entry-meta {
   margin: 9px 0 0;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: 0;
   color: var(--muted);
 }
 
@@ -308,11 +328,11 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   letter-spacing: 0.02em;
 }
 .disk-type {
-  padding: 2px 5px;
+  padding: 2px 6px;
   border: 1px solid var(--rule);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 .disk-percent {
@@ -328,9 +348,9 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   padding: 22px 24px;
 }
 .empty-kicker {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 .empty p { margin: 9px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink); }
@@ -342,9 +362,9 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   background: var(--sheet);
 }
 .notice-label {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 .notice p { margin: 7px 0 0; font-size: 13px; line-height: 1.7; }
@@ -380,18 +400,11 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 .stamp-main {
   display: block;
   font-family: var(--font-mono);
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   line-height: 1.15;
   white-space: nowrap;
-}
-.stamp-sub {
-  display: block;
-  margin-top: 5px;
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  letter-spacing: 0.22em;
 }
 @keyframes stamp-press {
   from { opacity: 0; transform: rotate(-12deg) scale(1.16); }
@@ -411,9 +424,9 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 }
 .measure-note {
   margin-top: 8px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 .water-track { position: relative; display: flex; height: 8px; margin-top: 12px; }
@@ -439,18 +452,18 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.08em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 .verdict-reason { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--rule); }
 .reason-label {
   display: block;
   margin-bottom: 6px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 .verdict-reason p { margin: 0; font-size: 13.5px; line-height: 1.75; }
@@ -464,17 +477,17 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 .side-title { margin: 0 0 8px; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
 .side-note {
   margin: 10px 0 0;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.75;
   color: var(--muted);
 }
 .side-foot {
   margin-top: 30px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
-  line-height: 1.9;
+  line-height: 1.8;
 }
 
 /* ---------- native chrome ---------- */
@@ -489,46 +502,48 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   border: 1px solid var(--rule) !important;
 }
 [data-testid="stCheckbox"] label p {
-  font-family: var(--font-mono) !important;
-  font-size: 9.5px !important;
-  letter-spacing: 0.14em !important;
-  color: var(--muted) !important;
-  text-transform: uppercase;
+  font-family: var(--font-ui) !important;
+  font-size: 13px !important;
+  letter-spacing: 0 !important;
+  color: var(--ink) !important;
+  text-transform: none !important;
 }
 [data-testid="stCheckbox"] [role="switch"] { accent-color: var(--accent); }
 
 /* ---------- type resets against Streamlit's markdown defaults ---------- */
 [data-testid="stMarkdownContainer"] { font-family: var(--font-ui); }
 .masthead-sub {
-  margin: 8px 0 0 !important;
-  font-size: 12.5px !important;
+  margin: 9px 0 0 !important;
+  font-size: 13px !important;
   line-height: 1.6 !important;
   color: var(--muted) !important;
 }
 .sheet-title {
-  margin: 0 0 5px !important;
-  font-size: 17px !important;
+  margin: 0 0 6px !important;
+  font-family: var(--font-ui) !important;
+  font-size: 18px !important;
   font-weight: 600 !important;
-  line-height: 1.45 !important;
-  letter-spacing: 0.03em !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.01em !important;
   color: var(--ink) !important;
 }
 .sheet-caption {
-  margin: 0 0 22px !important;
-  font-size: 12.5px !important;
+  margin: 0 0 24px !important;
+  font-size: 13px !important;
   line-height: 1.7 !important;
   color: var(--muted) !important;
 }
 .entry-meta {
   margin: 9px 0 0 !important;
-  font-family: var(--font-mono) !important;
-  font-size: 10px !important;
-  line-height: 1.5 !important;
-  letter-spacing: 0.04em !important;
+  font-family: var(--font-ui) !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
   color: var(--muted) !important;
 }
 .side-title {
   margin: 0 0 8px !important;
+  font-family: var(--font-ui) !important;
   font-size: 14px !important;
   font-weight: 600 !important;
   letter-spacing: 0.02em !important;
@@ -536,7 +551,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 }
 .side-note {
   margin: 10px 0 0 !important;
-  font-size: 11.5px !important;
+  font-size: 12px !important;
   line-height: 1.75 !important;
   color: var(--muted) !important;
 }
@@ -559,10 +574,10 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 }
 .measure-note {
   margin: 8px 0 0 !important;
-  font-family: var(--font-mono) !important;
-  font-size: 9.5px !important;
+  font-family: var(--font-ui) !important;
+  font-size: 11px !important;
   line-height: 1.5 !important;
-  letter-spacing: 0.1em !important;
+  letter-spacing: 0 !important;
   color: var(--muted) !important;
 }
 
@@ -571,12 +586,12 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  margin-top: 34px;
-  padding-top: 12px;
+  margin-top: 40px;
+  padding-top: 14px;
   border-top: 1px solid var(--rule);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0;
   color: var(--muted);
 }
 
@@ -709,18 +724,18 @@ def _sys_readout(data: dict[str, Any], captured: datetime) -> str:
     disks_html = (
         '<div class="disks-head">'
         '<h3 class="sheet-title">磁盘</h3>'
-        f'<span class="sheet-meta">{len(disks)} VOLUMES</span>'
+        f'<span class="sheet-meta">{len(disks)} 块磁盘</span>'
         "</div>"
         f"{disk_rows}"
         if disks
         else '<div class="disks-head"><h3 class="sheet-title">磁盘</h3>'
-        '<span class="sheet-meta">0 VOLUMES</span></div>'
+        '<span class="sheet-meta">0 块磁盘</span></div>'
     )
 
     return (
         '<section class="readout">'
         '<div class="sheet-head">'
-        '<span class="sheet-meta">READOUT</span>'
+        '<span class="sheet-meta">读数记录</span>'
         f'<span class="sheet-meta">{captured.strftime("%Y-%m-%d %H:%M:%S")}</span>'
         "</div>"
         f"{entries}{disks_html}"
@@ -732,7 +747,6 @@ def _verdict_html(result: dict[str, Any], text: str, captured: datetime) -> str:
     water = jd_detector.estimate_water_index(text)
     confidence = result.get("confidence")
     verdict_text = "销售 / 地推" if result["is_sales"] else "非销售 / 地推"
-    verdict_sub = "SALES · FIELD" if result["is_sales"] else "NOT SALES"
     fresh = " is-fresh" if st.session_state.pop("jd_fresh_stamp", False) else ""
 
     confidence_html = (
@@ -764,14 +778,13 @@ def _verdict_html(result: dict[str, Any], text: str, captured: datetime) -> str:
     return (
         '<section class="verdict">'
         '<div class="verdict-top">'
-        '<span class="sheet-meta">VERDICT</span>'
+        '<span class="sheet-meta">判定记录</span>'
         f'<span class="sheet-meta">{captured.strftime("%Y-%m-%d %H:%M:%S")}</span>'
         "</div>"
         '<div class="verdict-grid">'
         '<div class="stamp-wrap">'
         f'<div class="stamp{fresh}" role="status" aria-label="{verdict_text}">'
         f'<span class="stamp-main">{verdict_text}</span>'
-        f'<span class="stamp-sub">{verdict_sub}</span>'
         "</div></div>"
         '<div class="verdict-measures">'
         f"{confidence_html}"
@@ -816,9 +829,9 @@ def _show_sys_radar() -> None:
     error = st.session_state.get("sys_radar_error")
     saved = st.session_state.get("sys_radar")
     if error:
-        _notice("error", "READ FAILED / 读取失败", f"无法读取系统信息：{error}")
+        _notice("error", "读取失败", f"无法读取系统信息：{error}")
     elif saved is None:
-        _empty("NO READOUT", "尚无读数。点击「采集读数」，本机状态会登记到这张卡片上。")
+        _empty("尚无读数", "点击「采集读数」，本机状态会登记到这张卡片上。")
     else:
         st.markdown(
             _sys_readout(saved["data"], saved["captured"]),
@@ -863,9 +876,9 @@ def _show_jd_detector(api_key: str) -> None:
     error = st.session_state.get("jd_error")
     saved = st.session_state.get("jd_verdict")
     if error:
-        _notice("error", "ERROR / 未完成", error)
+        _notice("error", "未完成", error)
     elif saved is None:
-        _empty("NO VERDICT", "粘贴 JD 后点击「开始脱水」，判定会盖在这张卡片上。")
+        _empty("尚无判定", "粘贴 JD 后点击「开始脱水」，判定会盖在这张卡片上。")
     else:
         st.markdown(
             _verdict_html(saved["result"], saved["text"], saved["captured"]),
@@ -888,12 +901,12 @@ def main() -> None:
         '<div class="masthead-left">'
         '<div class="wordmark-row">'
         '<span class="tab-mark" aria-hidden="true"></span>'
-        '<span class="wordmark">MYAITOOLS</span>'
+        '<h1 class="wordmark">MYAITOOLS</h1>'
         "</div>"
         '<p class="masthead-sub">本地工具集 · 系统读数与 JD 判别</p>'
         "</div>"
-        '<div class="masthead-right">LOCAL TOOLKIT<br>'
-        f"CATALOGUE 002 · v{__version__}</div>"
+        '<div class="masthead-right">Local toolkit<br>'
+        f"Catalogue 002 · v{__version__}</div>"
         "</header>",
         unsafe_allow_html=True,
     )
@@ -909,8 +922,8 @@ def main() -> None:
         st.markdown(
             '<p class="side-note">仅保存在本次会话，不写入磁盘；'
             "调用时才会发送给 DeepSeek。</p>"
-            '<div class="side-foot">CATALOGUE 002<br>'
-            f"MYAITOOLS v{__version__}</div>",
+            '<div class="side-foot">Catalogue 002<br>'
+            f"MyAITools v{__version__}</div>",
             unsafe_allow_html=True,
         )
         st.toggle(
@@ -927,7 +940,7 @@ def main() -> None:
         _show_jd_detector(api_key)
 
     st.markdown(
-        '<div class="colophon"><span>MYAITOOLS · LOCAL TOOLKIT</span>'
+        '<div class="colophon"><span>MyAITools · 本地工具</span>'
         "<span>数据来源：本机 psutil / DeepSeek API · JD 判定以外不出本机</span></div>",
         unsafe_allow_html=True,
     )
