@@ -128,7 +128,9 @@ pip install -e .
 streamlit run src/myaitools/app.py
 ```
 
-浏览器会自动打开 <http://localhost:8501>。系统雷达点击「开始检测」即可查看 CPU / 内存 / 磁盘；JD 脱水器需要先在左侧边栏填写 `DEEPSEEK_API_KEY`（或启动前设置环境变量），粘贴 JD 后点击「开始脱水」，会显示结论、置信度和水分指数。
+浏览器会自动打开 <http://localhost:8501>。系统雷达点击「采集读数」即可查看 CPU / 内存 / 磁盘；JD 脱水器需要先在左侧边栏填写 `DEEPSEEK_API_KEY`（或启动前设置环境变量），粘贴 JD 后点击「开始脱水」，会显示结论、置信度和水分指数。
+
+界面采用「精密档案卡」视觉世界（纸面读数、校准刻度、印章判定），设计 token 见 [DESIGN.md](DESIGN.md)，产品定义见 [PRODUCT.md](PRODUCT.md)。
 
 ## 新增一个小工具
 

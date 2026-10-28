@@ -13,11 +13,13 @@
 ### 变更
 
 - 新增运行依赖 `streamlit>=1.36`
+- GUI 重做为「精密档案卡」视觉世界：Streamlit 主题 + 自定义 CSS、校准刻度条、印章判定与纸面读数排版
 
 ### 文档
 
 - README 增加 Release / CI / License 徽章，并补充从 GitHub 直接安装的说明
 - README 增加图形界面启动说明
+- 新增 `PRODUCT.md` 与 `DESIGN.md`，记录产品定义与设计 token
 
 ## [0.2.0] - 2026-10-28
 

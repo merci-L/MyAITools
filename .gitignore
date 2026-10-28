@@ -28,6 +28,9 @@ htmlcov/
 .tox/
 .nox/
 
+# ---- 本地设计验证产物（impeccable）----
+.impeccable/
+
 # ---- 类型检查 / 静态工具缓存 ----
 .mypy_cache/
 .pyright/
