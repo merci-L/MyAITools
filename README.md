@@ -8,6 +8,14 @@
 
 一组轻量、可组合的 Python 命令行小工具，持续更新中。
 
+## 界面预览
+
+| 浅色模式 | 深色模式（夜班档案室） |
+| :---: | :---: |
+| ![浅色模式：系统读数](docs/images/light-mode.png) | ![深色模式：系统读数](docs/images/dark-mode.png) |
+
+![JD 水分判定：印章、置信度与水分指数](docs/images/jd-verdict.png)
+
 ## 特性
 
 - **一个工具一个模块**：互不依赖，看得懂、改得动、删得掉
@@ -27,6 +35,7 @@ MyAITools/
 │       ├── ci.yml
 │       └── release.yml       # 打 v* 标签后自动发布 GitHub Release
 ├── docs/                     # 文档
+│   ├── images/               # README 界面预览截图
 │   ├── adding-a-tool.md      # 如何新增一个小工具
 │   ├── git-workflow.md       # Git 初始化与开源发布流程
 │   └── jd-detector.md        # jd-detector 使用说明
