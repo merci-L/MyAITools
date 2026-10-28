@@ -14,6 +14,18 @@ colors:
   gauge-track: "#E6E0D1"
   scrollbar-thumb: "#C9C2B0"
   ochre-water: "#B07D2E"
+  dark-ground: "#12100C"
+  dark-sheet: "#1D1A14"
+  dark-ink: "#ECE5D6"
+  dark-muted: "#A49B87"
+  dark-rule: "#3A352B"
+  dark-accent: "#E0765F"
+  dark-ok: "#86A882"
+  dark-caution: "#CFA055"
+  dark-ochre-water: "#C08A48"
+  dark-sidebar: "#17140F"
+  dark-gauge-track: "#2A261E"
+  dark-scrollbar: "#403B30"
 typography:
   wordmark:
     fontFamily: "Cascadia Mono, Cascadia Code, Consolas, monospace"
@@ -180,6 +192,17 @@ MyAITools 的操作界面是一张精密档案卡：读数像登记在卡片上�
 - **Sage OK** (#4F6B4F)：水分指数 0–20 区间。
 - **Amber Caution** (#9A6B1F)：测量条 75–90% 的告警态、水分指数 21–40 区间。
 
+### Dark Variant — The Night Archive
+
+深色外观是同一间档案室的夜班，不是另一套产品：地面换成暖炭黑（#12100C），纸面变成深色卡纸（#1D1A14），墨色反转成暖白（#ECE5D6），朱红提亮到 #E0765F 以保证深底上的小字对比度。它保留全部版式、刻度、虚线引导与印章，只是把「纸张在灯下」换成「纸张在台灯下」：暖、暗、安静，不做霓虹、不做发光。
+
+- **Night Ground** (#12100C)：页面地面。
+- **Night Sheet** (#1D1A14)：纸面、输入框、页签激活态。
+- **Lamp Ink** (#ECE5D6)：正文与数值，对纸面约 12:1。
+- **Night Muted** (#A49B87)：说明文字，对纸面约 6.5:1。
+- **Night Rule** (#3A352B)：发丝线与虚线引导。
+- **Night Accent** (#E0765F)：夜班里的朱红记号（印章、激活页签顶边、告警）。
+
 ### Named Rules
 
 **The One Red Rule.** 朱红在任意一屏的覆盖面积不超过 5%，且只做“记号”用途；大面积铺红即失去档案感。
@@ -187,6 +210,8 @@ MyAITools 的操作界面是一张精密档案卡：读数像登记在卡片上�
 **The Paper Rule.** 所有数据必须落在 Card Sheet 上，不直接贴在 Stone Ground 上；地面只负责承载纸面。
 
 **The Calibration Rule.** 颜色只表达真实状态：测量条的琥珀/朱红仅在越过阈值时出现，置信度条永远用墨色，不用红色暗示“警告”。
+
+**The Night Shift Rule.** 深色外观只换纸与灯，不换世界：布局、字体层级、刻度与印章规则完全一致；禁止霓虹、发光与高饱和大面积色。
 
 ## Typography
 

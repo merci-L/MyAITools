@@ -37,6 +37,14 @@ def test_sys_radar_empty_state() -> None:
     assert "NO READOUT" in _markdown_text(app)
 
 
+def test_dark_mode_toggle_switches_palette() -> None:
+    app = _run_app()
+    assert "--ground: #efebe1" in _markdown_text(app)
+    app.toggle[0].set_value(True).run()
+    assert not app.exception
+    assert "--ground: #12100c" in _markdown_text(app)
+
+
 def test_sys_radar_button_shows_readout() -> None:
     app = _run_app()
     app.button[0].click().run()

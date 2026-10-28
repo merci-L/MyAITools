@@ -85,7 +85,7 @@ pip install -e .
 streamlit run src/myaitools/app.py
 ```
 
-Open <http://localhost:8501> if the browser does not open automatically. System Radar works out of the box; JD Detector requires `DEEPSEEK_API_KEY` (enter it in the sidebar or set the environment variable).
+Open <http://localhost:8501> if the browser does not open automatically. System Radar works out of the box; JD Detector requires `DEEPSEEK_API_KEY` (enter it in the sidebar or set the environment variable). The sidebar "深色模式" toggle switches between the light and dark (night archive) appearances.
 
 The UI follows a "precision archive card" visual world (paper sheets, calibrated gauges, stamped verdicts). Design tokens live in [DESIGN.md](DESIGN.md); product context lives in [PRODUCT.md](PRODUCT.md).
 

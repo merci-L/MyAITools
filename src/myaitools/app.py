@@ -18,22 +18,52 @@ import streamlit as st
 from myaitools import __version__
 from myaitools.tools import jd_detector, sys_radar
 
-_CSS = """
-<style>
-:root {
-  --ground: #efebe1;
-  --sheet: #f9f6ec;
-  --ink: #20201d;
-  --muted: #676254;
-  --rule: #d6d0c0;
-  --accent: #a63d2f;
-  --ok: #4f6b4f;
-  --caution: #9a6b1f;
-  --font-ui: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB",
-    "Noto Sans SC", sans-serif;
-  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, "SFMono-Regular",
-    Menlo, "DejaVu Sans Mono", monospace;
+_LIGHT_PALETTE = {
+    "ground": "#efebe1",
+    "sheet": "#f9f6ec",
+    "ink": "#20201d",
+    "muted": "#676254",
+    "rule": "#d6d0c0",
+    "accent": "#a63d2f",
+    "ok": "#4f6b4f",
+    "caution": "#9a6b1f",
+    "ochre-water": "#b07d2e",
+    "sidebar": "#e9e4d7",
+    "gauge-track": "#e6e0d1",
+    "scrollbar": "#c9c2b0",
 }
+
+_DARK_PALETTE = {
+    "ground": "#12100c",
+    "sheet": "#1d1a14",
+    "ink": "#ece5d6",
+    "muted": "#a49b87",
+    "rule": "#3a352b",
+    "accent": "#e0765f",
+    "ok": "#86a882",
+    "caution": "#cfa055",
+    "ochre-water": "#c08a48",
+    "sidebar": "#17140f",
+    "gauge-track": "#2a261e",
+    "scrollbar": "#403b30",
+}
+
+_FONT_TOKENS = (
+    '  --font-ui: "Segoe UI", "Microsoft YaHei", "PingFang SC", '
+    '"Hiragino Sans GB", "Noto Sans SC", sans-serif;\n'
+    '  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, '
+    '"SFMono-Regular", Menlo, "DejaVu Sans Mono", monospace;\n'
+)
+
+
+def _palette_css(dark: bool) -> str:
+    """返回当前外观的 CSS 变量块。"""
+    palette = _DARK_PALETTE if dark else _LIGHT_PALETTE
+    lines = "\n".join(f"  --{name}: {value};" for name, value in palette.items())
+    return f"<style>\n:root {{\n{lines}\n{_FONT_TOKENS}}}\n"
+
+
+_CSS_BODY = """
 
 html, body, .stApp, [data-testid="stAppViewContainer"] {
   background: var(--ground);
@@ -54,7 +84,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 ::selection { background: var(--accent); color: var(--sheet); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--ground); }
-::-webkit-scrollbar-thumb { background: #c9c2b0; border: 3px solid var(--ground); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border: 3px solid var(--ground); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- masthead ---------- */
@@ -253,7 +283,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   right: 0;
   bottom: 0;
   height: 6px;
-  background: #e6e0d1;
+  background: var(--gauge-track);
 }
 .gauge-fill { height: 100%; background: var(--ink); }
 .gauge-fill.is-caution { background: var(--caution); }
@@ -427,7 +457,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 
 /* ---------- sidebar ---------- */
 [data-testid="stSidebar"] {
-  background: #e9e4d7;
+  background: var(--sidebar);
   border-right: 1px solid var(--rule);
 }
 [data-testid="stSidebar"] .block-container { padding-top: 2.2rem; }
@@ -446,6 +476,26 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   color: var(--muted);
   line-height: 1.9;
 }
+
+/* ---------- native chrome ---------- */
+[data-testid="stSpinner"] { color: var(--muted) !important; }
+[data-baseweb="tooltip"] {
+  background: var(--sheet) !important;
+  color: var(--ink) !important;
+}
+[data-testid="stTooltipContent"] {
+  background: var(--sheet) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--rule) !important;
+}
+[data-testid="stCheckbox"] label p {
+  font-family: var(--font-mono) !important;
+  font-size: 9.5px !important;
+  letter-spacing: 0.14em !important;
+  color: var(--muted) !important;
+  text-transform: uppercase;
+}
+[data-testid="stCheckbox"] [role="switch"] { accent-color: var(--accent); }
 
 /* ---------- type resets against Streamlit's markdown defaults ---------- */
 [data-testid="stMarkdownContainer"] { font-family: var(--font-ui); }
@@ -482,6 +532,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   font-size: 14px !important;
   font-weight: 600 !important;
   letter-spacing: 0.02em !important;
+  color: var(--ink) !important;
 }
 .side-note {
   margin: 10px 0 0 !important;
@@ -548,7 +599,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 _WATER_ZONES = (
     (20, "var(--ok)"),
     (20, "var(--caution)"),
-    (30, "#b07d2e"),
+    (30, "var(--ochre-water)"),
     (30, "var(--accent)"),
 )
 
@@ -830,7 +881,8 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="auto",
     )
-    st.markdown(_CSS, unsafe_allow_html=True)
+    dark_mode = bool(st.session_state.get("dark_mode", False))
+    st.markdown(_palette_css(dark_mode) + _CSS_BODY, unsafe_allow_html=True)
     st.markdown(
         '<header class="masthead">'
         '<div class="masthead-left">'
@@ -860,6 +912,12 @@ def main() -> None:
             '<div class="side-foot">CATALOGUE 002<br>'
             f"MYAITOOLS v{__version__}</div>",
             unsafe_allow_html=True,
+        )
+        st.toggle(
+            "深色模式",
+            key="dark_mode",
+            value=dark_mode,
+            help="在浅色与深色档案室之间切换。",
         )
 
     sys_tab, jd_tab = st.tabs(["系统雷达", "JD 脱水器"])
