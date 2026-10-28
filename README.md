@@ -19,7 +19,9 @@ MyAITools/
 ├── .github/                  # Issue / PR 模板与 CI 工作流
 │   ├── ISSUE_TEMPLATE/
 │   ├── pull_request_template.md
-│   └── workflows/ci.yml
+│   └── workflows/
+│       ├── ci.yml
+│       └── release.yml       # 打 v* 标签后自动发布 GitHub Release
 ├── docs/                     # 文档
 │   ├── adding-a-tool.md      # 如何新增一个小工具
 │   ├── git-workflow.md       # Git 初始化与开源发布流程
@@ -125,6 +127,7 @@ pre-commit install      # 安装提交前钩子（只需一次）
 ## 开源与发布
 
 - 仓库已推送到 GitHub，`main` 分支由 CI 保护，历史版本见 [Releases](https://github.com/merci-L/MyAITools/releases)
+- 打上 `v*` 标签后，`.github/workflows/release.yml` 会自动提取 `CHANGELOG.md` 内容发布 GitHub Release
 - 推送到 GitHub 的完整步骤、分支模型、提交信息规范、打标签与发布流程：见 [docs/git-workflow.md](docs/git-workflow.md)
 - 发布到 PyPI（可选）：`python -m build` 后 `twine upload dist/*`
 
