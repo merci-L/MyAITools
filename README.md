@@ -116,6 +116,20 @@ python -m myaitools jd-detector "招聘地推专员，要求吃苦耐劳，单�
 理由: 职位为地推专员，职责为地面推广拉新获客，属销售/地推岗位。
 ```
 
+## 图形界面（Streamlit）
+
+除了命令行，项目还自带一个极简 Web 界面，包含「系统雷达」和「JD 脱水器」两个标签页：
+
+```powershell
+# 在仓库根目录安装依赖（streamlit 已包含在依赖中）
+pip install -e .
+
+# 启动界面
+streamlit run src/myaitools/app.py
+```
+
+浏览器会自动打开 <http://localhost:8501>。系统雷达点击「开始检测」即可查看 CPU / 内存 / 磁盘；JD 脱水器需要先在左侧边栏填写 `DEEPSEEK_API_KEY`（或启动前设置环境变量），粘贴 JD 后点击「开始脱水」，会显示结论、置信度和水分指数。
+
 ## 新增一个小工具
 
 三步即可，详细模板见 [docs/adding-a-tool.md](docs/adding-a-tool.md)：

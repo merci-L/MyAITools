@@ -7,11 +7,17 @@
 
 ### 新增
 
+- 新增 Streamlit 图形界面 `app.py`：包含「系统雷达」和「JD 脱水器」两个标签页，JD 脱水器展示结论、置信度与水分指数
 - 新增 Release 自动发布工作流：推送 `v*` 标签后自动提取 `CHANGELOG.md` 内容创建 GitHub Release
+
+### 变更
+
+- 新增运行依赖 `streamlit>=1.36`
 
 ### 文档
 
 - README 增加 Release / CI / License 徽章，并补充从 GitHub 直接安装的说明
+- README 增加图形界面启动说明
 
 ## [0.2.0] - 2026-10-28
 

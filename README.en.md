@@ -75,6 +75,18 @@ python -m myaitools jd-detector "招聘地推专员，要求吃苦耐劳，单�
 理由: 职位为地推专员，职责为地面推广拉新获客，属销售/地推岗位。
 ```
 
+## Web UI (Streamlit)
+
+Besides the CLI, the project ships a minimal Streamlit UI with two tabs: System Radar and JD Detector.
+
+```powershell
+# from the repository root
+pip install -e .
+streamlit run src/myaitools/app.py
+```
+
+Open <http://localhost:8501> if the browser does not open automatically. System Radar works out of the box; JD Detector requires `DEEPSEEK_API_KEY` (enter it in the sidebar or set the environment variable).
+
 ## Adding a tool
 
 See [docs/adding-a-tool.md](docs/adding-a-tool.md). In short:

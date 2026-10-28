@@ -23,6 +23,7 @@ __all__ = [
     "JdDetectorTool",
     "build_messages",
     "classify",
+    "estimate_water_index",
     "parse_classification",
     "read_input",
     "render_json",
@@ -34,6 +35,36 @@ DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
 DEFAULT_TIMEOUT = 30.0
 API_KEY_ENV = "DEEPSEEK_API_KEY"
+
+# 「画饼」关键词及权重，用于本地估算 JD 的水分指数
+WATER_KEYWORDS: dict[str, int] = {
+    "躺赚": 25,
+    "暴富": 25,
+    "年薪百万": 20,
+    "年薪四十万": 18,
+    "月入过万": 15,
+    "月薪过万": 15,
+    "画饼": 15,
+    "上不封顶": 12,
+    "不是梦": 10,
+    "不看出身": 10,
+    "狼性": 10,
+    "轻松": 8,
+    "大量招人": 8,
+    "不限学历": 8,
+    "无经验": 8,
+    "996": 8,
+    "大小周": 8,
+    "包吃住": 6,
+    "单休": 6,
+    "提成": 6,
+    "急招": 5,
+    "老板nice": 5,
+    "底薪": 4,
+    "抗压": 4,
+    "氛围好": 4,
+    "团队年轻": 3,
+}
 
 SYSTEM_PROMPT = (
     "你是一个招聘信息分类助手。请判断用户提供的职位描述是否属于销售或地推（地面推广）岗位。\n"
@@ -202,6 +233,13 @@ def render_text(result: dict[str, Any]) -> str:
 def render_json(result: dict[str, Any]) -> str:
     """把判断结果渲染为 JSON 字符串。"""
     return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+def estimate_water_index(text: str) -> int:
+    """用关键词规则估算 JD 的水分指数（0-100，越高越像在画饼）。"""
+    normalized = text.lower()
+    score = sum(weight for keyword, weight in WATER_KEYWORDS.items() if keyword in normalized)
+    return max(0, min(100, score))
 
 
 def read_input(text: str | None, file: Path | None) -> str:

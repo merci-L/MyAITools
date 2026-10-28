@@ -238,3 +238,18 @@ def test_cli_rejects_negative_timeout(
 
     assert main(["jd-detector", "招聘地推专员", "--timeout", "-1"]) == 2
     assert "必须大于 0" in capsys.readouterr().err
+
+
+def test_estimate_water_index_flags_buzzwords() -> None:
+    text = "招聘地推专员，要求吃苦耐劳，单休，底薪3000，年薪四十万不是梦"
+    assert jd_detector.estimate_water_index(text) >= 30
+
+
+def test_estimate_water_index_clean_jd() -> None:
+    text = "负责后端服务开发，要求三年以上 Python 经验，熟悉分布式系统"
+    assert jd_detector.estimate_water_index(text) < 10
+
+
+def test_estimate_water_index_caps_at_100() -> None:
+    text = "躺赚 暴富 年薪百万 月入过万 上不封顶 不是梦 画饼"
+    assert jd_detector.estimate_water_index(text) == 100

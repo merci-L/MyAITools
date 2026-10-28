@@ -27,6 +27,7 @@ classifiers = [
 ]
 dependencies = [
     "psutil>=5.9",
+    "streamlit>=1.36",
 ]
 
 [project.optional-dependencies]
