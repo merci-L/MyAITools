@@ -107,9 +107,9 @@ chars: 4821
 | --- | --- | --- |
 | `word-count` | 统计文本文件的字符数、单词数、行数 | `myaitools word-count README.md` |
 | `sys-radar` | 查看本机 CPU、内存使用率与磁盘空间 | `myaitools sys-radar` |
-| `jd-detector` | 调用 DeepSeek API 判断职位描述是否为销售/地推岗位 | `myaitools jd-detector --file jd.txt` |
+| `jd-detector` | 调用 DeepSeek API 判断职位描述是否为销售/地推岗位（支持单条与批量） | `myaitools jd-detector --file jds.txt` |
 
-`jd-detector` 需要先设置环境变量 `DEEPSEEK_API_KEY`，详细用法（输入方式、JSON 输出、退出码、隐私说明）见 [docs/jd-detector.md](docs/jd-detector.md)。
+`jd-detector` 需要先设置环境变量 `DEEPSEEK_API_KEY`，详细用法（单条/批量输入、JSON 输出、退出码、隐私说明）见 [docs/jd-detector.md](docs/jd-detector.md)。
 
 ### 实际运行示例
 
@@ -124,6 +124,23 @@ python -m myaitools jd-detector "招聘地推专员，要求吃苦耐劳，单�
 置信度: 98%
 理由: 职位为地推专员，职责为地面推广拉新获客，属销售/地推岗位。
 ```
+
+### 批量分析
+
+`--file` 支持一次分析多条 JD（`.txt` 或 `.csv`）：
+
+- **TXT**：用连续空行或单独一行 `---` 分隔每条 JD
+- **CSV**：每行一条；`岗位` / `title` / `position` 列作为岗位简称，`职位描述` / `jd` / `description` 列作为正文；没有这些列时会把整行拼成一条
+
+```powershell
+# TXT 批量
+python -m myaitools jd-detector --file jds.txt
+
+# CSV 批量，并指定报告路径
+python -m myaitools jd-detector --file jds.csv --report my-report.csv
+```
+
+终端会打印 Markdown 汇总表（序号 / 岗位简称 / 岗位性质 / 水分指数），同时生成 `report.csv`（UTF-8 BOM，Excel 可直接打开）。某一条 API 超时或报错不会中断整批，对应行会标记为「分析失败」。
 
 ## 图形界面（Streamlit）
 

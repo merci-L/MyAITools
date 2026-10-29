@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
 import sys
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,22 +21,58 @@ __all__ = [
     "DEFAULT_BASE_URL",
     "DEFAULT_MODEL",
     "DEFAULT_TIMEOUT",
+    "REPORT_COLUMNS",
+    "REPORT_FILENAME",
+    "JdBatchResult",
     "JdDetectorError",
     "JdDetectorTool",
+    "JdItem",
+    "analyze_batch",
     "build_messages",
     "classify",
     "estimate_water_index",
+    "load_file",
     "parse_classification",
     "read_input",
     "render_json",
+    "render_markdown_table",
     "render_text",
     "request_completion",
+    "short_title",
+    "split_jds",
+    "write_report_csv",
 ]
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
 DEFAULT_TIMEOUT = 30.0
 API_KEY_ENV = "DEEPSEEK_API_KEY"
+REPORT_FILENAME = "report.csv"
+REPORT_COLUMNS = ("序号", "岗位简称", "岗位性质", "水分指数")
+
+_TEXT_COLUMNS = ("jd", "jd_text", "description", "职位描述", "岗位描述", "内容")
+_TITLE_COLUMNS = ("title", "position", "岗位", "岗位名称", "职位", "职位名称")
+_SEPARATOR_LINE = re.compile(r"(?m)^\s*(?:-{3,}|—{3,}|={3,})\s*$")
+
+
+@dataclass(frozen=True)
+class JdItem:
+    """一条待分析的 JD。"""
+
+    text: str
+    title: str = ""
+
+
+@dataclass(frozen=True)
+class JdBatchResult:
+    """批量分析中的一条结果；``error`` 非空表示该条分析失败。"""
+
+    index: int
+    title: str
+    nature: str
+    water: int
+    error: str | None = None
+
 
 # 「画饼」关键词及权重，用于本地估算 JD 的水分指数
 WATER_KEYWORDS: dict[str, int] = {
@@ -242,6 +280,147 @@ def estimate_water_index(text: str) -> int:
     return max(0, min(100, score))
 
 
+def split_jds(text: str) -> list[str]:
+    """把长文本按连续空行或 ``---`` 分隔符切割成 JD 列表。"""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
+    chunks: list[str] = []
+    for block in _SEPARATOR_LINE.split(normalized):
+        for part in re.split(r"\n[ \t]*\n", block):
+            cleaned = part.strip()
+            if cleaned:
+                chunks.append(cleaned)
+    return chunks
+
+
+def short_title(text: str, title: str = "", index: int = 1) -> str:
+    """取岗位简称：优先显式标题，否则取 JD 第一行；超长截断。"""
+    candidate = (title or "").strip()
+    if not candidate:
+        for line in text.splitlines():
+            stripped = line.strip().lstrip("#").strip()
+            if stripped:
+                candidate = stripped
+                break
+    candidate = re.sub(r"^(?:岗位|职位|标题)[：:]\s*", "", candidate).strip()
+    if not candidate:
+        return f"JD {index}"
+    if len(candidate) > 20:
+        candidate = candidate[:20] + "…"
+    return candidate
+
+
+def load_file(path: Path) -> list[JdItem]:
+    """读取 .txt 或 .csv 文件，返回待分析的 JD 列表。"""
+    if not path.exists():
+        raise JdDetectorError(f"文件不存在：{path}")
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        return _load_csv(path)
+    if suffix != ".txt":
+        shown = suffix or "无扩展名"
+        raise JdDetectorError(f"仅支持 .txt 或 .csv 文件，收到 {shown}")
+    try:
+        content = path.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise JdDetectorError(f"读取文件失败：{exc}") from exc
+    return [JdItem(text=chunk) for chunk in split_jds(content)]
+
+
+def _load_csv(path: Path) -> list[JdItem]:
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            if not reader.fieldnames:
+                raise JdDetectorError("CSV 文件缺少表头")
+            columns = {name.strip().lower(): name for name in reader.fieldnames}
+            text_column = next((columns[key] for key in _TEXT_COLUMNS if key in columns), None)
+            title_column = next(
+                (columns[key] for key in _TITLE_COLUMNS if key in columns),
+                None,
+            )
+            items: list[JdItem] = []
+            for row in reader:
+                if text_column is not None:
+                    text = str(row.get(text_column) or "").strip()
+                else:
+                    text = " ".join(
+                        str(value).strip() for value in row.values() if value and str(value).strip()
+                    )
+                if not text:
+                    continue
+                title = str(row.get(title_column) or "").strip() if title_column else ""
+                items.append(JdItem(text=text, title=title))
+            return items
+    except csv.Error as exc:
+        raise JdDetectorError(f"CSV 解析失败：{exc}") from exc
+    except OSError as exc:
+        raise JdDetectorError(f"读取文件失败：{exc}") from exc
+
+
+def analyze_batch(
+    items: list[JdItem],
+    *,
+    api_key: str,
+    model: str = DEFAULT_MODEL,
+    base_url: str = DEFAULT_BASE_URL,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> list[JdBatchResult]:
+    """逐条分析 JD；单条失败只记录“分析失败”，不中断整批。"""
+    results: list[JdBatchResult] = []
+    for index, item in enumerate(items, start=1):
+        water = estimate_water_index(item.text)
+        title = short_title(item.text, item.title, index)
+        try:
+            result = classify(
+                item.text,
+                api_key=api_key,
+                model=model,
+                base_url=base_url,
+                timeout=timeout,
+            )
+        except JdDetectorError as exc:
+            results.append(JdBatchResult(index, title, "分析失败", water, str(exc)))
+            continue
+        nature = "销售/地推" if result["is_sales"] else "非销售/地推"
+        results.append(JdBatchResult(index, title, nature, water))
+    return results
+
+
+def _escape_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ").strip()
+
+
+def render_markdown_table(results: list[JdBatchResult]) -> str:
+    """把批量结果渲染为 Markdown 表格。"""
+    lines = [
+        "| 序号 | 岗位简称 | 岗位性质 | 水分指数 |",
+        "| --- | --- | --- | --- |",
+    ]
+    for result in results:
+        lines.append(
+            f"| {result.index} | {_escape_cell(result.title)} | "
+            f"{_escape_cell(result.nature)} | {result.water}/100 |"
+        )
+    return "\n".join(lines)
+
+
+def write_report_csv(results: list[JdBatchResult], path: Path) -> Path:
+    """把批量结果写成 Excel 友好的 UTF-8 BOM CSV。"""
+    try:
+        if path.parent and not path.parent.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8-sig", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(REPORT_COLUMNS)
+            writer.writerows(
+                (result.index, result.title, result.nature, f"{result.water}/100")
+                for result in results
+            )
+    except OSError as exc:
+        raise JdDetectorError(f"写入报告失败：{exc}") from exc
+    return path
+
+
 def read_input(text: str | None, file: Path | None) -> str:
     """按优先级读取职位描述：文本参数 > --file > 标准输入。"""
     if text is not None and file is not None:
@@ -268,23 +447,33 @@ class JdDetectorTool:
     """``jd-detector`` 子命令：用 DeepSeek 判断职位是否为销售/地推。"""
 
     name = "jd-detector"
-    help = "调用 DeepSeek API 判断一段职位描述是否为销售/地推岗位"
+    help = "调用 DeepSeek API 判断职位描述是否为销售/地推岗位（支持批量）"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "text",
             nargs="?",
             default=None,
-            help="职位描述文本；省略时从 --file 或标准输入读取",
+            help="职位描述文本；省略时从标准输入读取（也可用 --file 批量分析）",
         )
         parser.add_argument(
             "-f",
             "--file",
             type=Path,
             default=None,
-            help="从 UTF-8 文本文件读取职位描述",
+            help="读取 .txt 或 .csv 文件并批量分析（txt 按空行或 --- 切割）",
         )
-        parser.add_argument("--json", action="store_true", help="以 JSON 格式输出判断结果")
+        parser.add_argument(
+            "--report",
+            type=Path,
+            default=Path(REPORT_FILENAME),
+            help=f"批量分析的 CSV 报告路径，默认 {REPORT_FILENAME}",
+        )
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            help="单条模式下以 JSON 格式输出判断结果",
+        )
         parser.add_argument(
             "--model",
             default=DEFAULT_MODEL,
@@ -307,8 +496,10 @@ class JdDetectorTool:
         if args.timeout <= 0:
             print("错误：--timeout 必须大于 0", file=sys.stderr)
             return 2
+        if args.file is not None:
+            return self._run_batch(args)
         try:
-            text = read_input(args.text, args.file)
+            text = read_input(args.text, None)
         except JdDetectorError as exc:
             print(f"错误：{exc}", file=sys.stderr)
             return 1
@@ -331,4 +522,42 @@ class JdDetectorTool:
             return 1
 
         print(render_json(result) if args.json else render_text(result))
+        return 0
+
+    def _run_batch(self, args: argparse.Namespace) -> int:
+        """批量模式：读取文件、逐条分析、打印表格并写出 report.csv。"""
+        if args.text is not None:
+            print("错误：不能同时指定文本参数和 --file", file=sys.stderr)
+            return 1
+        try:
+            items = load_file(args.file)
+        except JdDetectorError as exc:
+            print(f"错误：{exc}", file=sys.stderr)
+            return 1
+        if not items:
+            print("错误：文件中没有可分析的 JD", file=sys.stderr)
+            return 1
+
+        api_key = os.environ.get(API_KEY_ENV, "").strip()
+        if not api_key:
+            print(f"错误：未设置环境变量 {API_KEY_ENV}", file=sys.stderr)
+            return 1
+
+        results = analyze_batch(
+            items,
+            api_key=api_key,
+            model=args.model,
+            base_url=args.base_url,
+            timeout=args.timeout,
+        )
+        print(render_markdown_table(results))
+        succeeded = sum(1 for result in results if result.error is None)
+        failed = len(results) - succeeded
+        print(f"\n共 {len(results)} 条：成功 {succeeded} 条，失败 {failed} 条")
+        try:
+            report = write_report_csv(results, args.report)
+        except JdDetectorError as exc:
+            print(f"错误：{exc}", file=sys.stderr)
+            return 1
+        print(f"报告已写入：{report.resolve()}")
         return 0

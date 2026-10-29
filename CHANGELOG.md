@@ -5,13 +5,19 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-29
+
 ### 新增
 
+- `jd-detector` 支持 `--file` 批量流水线：读取 `.txt` / `.csv`，自动按空行或 `---` 切割 JD 并逐条分析
+- 批量分析在终端输出 Markdown 汇总表（序号 / 岗位简称 / 岗位性质 / 水分指数），并生成 `report.csv`（UTF-8 BOM，Excel 可直接打开）
+- 单条 JD 分析失败不会中断整批，结果标记为「分析失败」；可用 `--report` 指定报告路径
 - 新增 Streamlit 图形界面 `app.py`：包含「系统雷达」和「JD 脱水器」两个标签页，JD 脱水器展示结论、置信度与水分指数
 - 新增 Release 自动发布工作流：推送 `v*` 标签后自动提取 `CHANGELOG.md` 内容创建 GitHub Release
 
 ### 变更
 
+- `jd-detector --file` 从单条读取升级为批量入口；不带 `--file` 时仍支持文本参数 / 标准输入单条分析
 - 新增运行依赖 `streamlit>=1.36`
 - GUI 重做为「精密档案卡」视觉世界：Streamlit 主题 + 自定义 CSS、校准刻度条、印章判定与纸面读数排版
 - GUI 支持浅色 / 深色双外观：深色为同一档案世界的「夜班」版本，侧边栏开关即时切换
@@ -19,6 +25,7 @@
 
 ### 文档
 
+- README、`docs/jd-detector.md` 增加批量分析用法与 `report.csv` 说明
 - README 增加 Release / CI / License 徽章，并补充从 GitHub 直接安装的说明
 - README 增加图形界面启动说明
 - 新增 `PRODUCT.md` 与 `DESIGN.md`，记录产品定义与设计 token
@@ -43,6 +50,7 @@
 - 第一个示例工具 `word-count`：统计文本文件的字符数、单词数与行数
 - 开源配套文档：README（中英双版）、贡献指南、行为准则、Git 工作流教程
 
-[Unreleased]: https://github.com/merci-L/MyAITools/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/merci-L/MyAITools/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/merci-L/MyAITools/releases/tag/v0.3.0
 [0.2.0]: https://github.com/merci-L/MyAITools/releases/tag/v0.2.0
 [0.1.0]: https://github.com/merci-L/MyAITools/releases/tag/v0.1.0

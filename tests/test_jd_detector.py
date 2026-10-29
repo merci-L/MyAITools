@@ -157,7 +157,7 @@ def test_cli_reads_stdin(
     assert "是销售/地推岗位" in capsys.readouterr().out
 
 
-def test_cli_reads_file(
+def test_cli_batch_file_outputs_table_and_report(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
@@ -165,10 +165,20 @@ def test_cli_reads_file(
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
     _patch_completion(monkeypatch)
     jd_file = tmp_path / "jd.txt"
-    jd_file.write_text("招聘地推专员，负责拉新", encoding="utf-8")
+    jd_file.write_text(
+        "招聘地推专员，负责商圈拉新\n\n另一个地推岗位，负责扫码推广",
+        encoding="utf-8",
+    )
+    report = tmp_path / "report.csv"
 
-    assert main(["jd-detector", "--file", str(jd_file)]) == 0
-    assert "是销售/地推岗位" in capsys.readouterr().out
+    assert main(["jd-detector", "--file", str(jd_file), "--report", str(report)]) == 0
+    out = capsys.readouterr().out
+    assert "| 序号 | 岗位简称 | 岗位性质 | 水分指数 |" in out
+    assert "| 1 |" in out
+    assert "| 2 |" in out
+    assert "销售/地推" in out
+    assert "共 2 条：成功 2 条，失败 0 条" in out
+    assert report.exists()
 
 
 def test_cli_missing_api_key(

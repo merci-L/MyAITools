@@ -30,6 +30,7 @@ MyAITools 是一组轻量、可组合的 Python 小工具：统一的 CLI 入口
 
 - 系统雷达：CPU 使用率/核心数、内存使用率/已用/可用、各磁盘容量与使用率（psutil）
 - JD 脱水器：调用 DeepSeek 判断是否销售/地推岗位，展示结论、置信度、理由与本地规则计算的水分指数
+- JD 脱水器支持单条（文本/管道）与批量（`--file` 读取 `.txt` / `.csv`）；批量输出 Markdown 汇总表与 `report.csv`，单条失败不中断整批
 - Streamlit 自定义 CSS 可用，保留 Streamlit 的数据与交互能力，不引入新的前端框架
 - 现有 CLI 行为、工具命名（`sys-radar`、`jd-detector`）与测试结构保持不变
 
