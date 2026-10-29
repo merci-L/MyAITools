@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import io
 import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,8 +24,11 @@ from myaitools import __version__
 __all__ = [
     "API_KEY_ENV",
     "DEFAULT_BASE_URL",
+    "DEFAULT_CACHE_PATH",
     "DEFAULT_MODEL",
+    "DEFAULT_RETRIES",
     "DEFAULT_TIMEOUT",
+    "DEFAULT_WORKERS",
     "REPORT_COLUMNS",
     "REPORT_FILENAME",
     "JdBatchResult",
@@ -31,12 +39,15 @@ __all__ = [
     "build_messages",
     "classify",
     "estimate_water_index",
+    "load_bytes",
     "load_file",
     "parse_classification",
     "read_input",
+    "render_dry_run",
     "render_json",
     "render_markdown_table",
     "render_text",
+    "report_csv_bytes",
     "request_completion",
     "short_title",
     "split_jds",
@@ -46,9 +57,14 @@ __all__ = [
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
 DEFAULT_TIMEOUT = 30.0
+DEFAULT_WORKERS = 4
+DEFAULT_RETRIES = 2
+DEFAULT_CACHE_PATH = Path(".cache/jd-detector.json")
 API_KEY_ENV = "DEEPSEEK_API_KEY"
 REPORT_FILENAME = "report.csv"
 REPORT_COLUMNS = ("序号", "岗位简称", "岗位性质", "水分指数")
+_RETRYABLE_HTTP_STATUS = frozenset({408, 409, 425, 429, 500, 502, 503, 504})
+_EXCEL_FORMULA_PREFIXES = ("=", "+", "-", "@")
 
 _TEXT_COLUMNS = ("jd", "jd_text", "description", "职位描述", "岗位描述", "内容")
 _TITLE_COLUMNS = ("title", "position", "岗位", "岗位名称", "职位", "职位名称")
@@ -72,6 +88,7 @@ class JdBatchResult:
     nature: str
     water: int
     error: str | None = None
+    cached: bool = False
 
 
 # 「画饼」关键词及权重，用于本地估算 JD 的水分指数
@@ -118,7 +135,14 @@ _FALSE_VALUES = {"false", "no", "否", "0"}
 
 
 class JdDetectorError(Exception):
-    """调用 DeepSeek API 或解析结果时发生的错误。"""
+    """调用 DeepSeek API 或解析结果时发生的错误。
+
+    ``retryable`` 为 True 时，批量流水线会对该条 JD 做指数退避重试。
+    """
+
+    def __init__(self, message: str, *, retryable: bool = False) -> None:
+        super().__init__(message)
+        self.retryable = retryable
 
 
 def build_messages(text: str) -> list[dict[str, str]]:
@@ -222,11 +246,17 @@ def request_completion(
             if isinstance(error, dict):
                 detail = str(error.get("message") or "")
         suffix = f"：{detail}" if detail else ""
-        raise JdDetectorError(f"DeepSeek API 返回 HTTP {exc.code}{suffix}") from exc
+        raise JdDetectorError(
+            f"DeepSeek API 返回 HTTP {exc.code}{suffix}",
+            retryable=exc.code in _RETRYABLE_HTTP_STATUS,
+        ) from exc
     except urllib.error.URLError as exc:
-        raise JdDetectorError(f"无法连接 DeepSeek API：{exc.reason}") from exc
+        raise JdDetectorError(f"无法连接 DeepSeek API：{exc.reason}", retryable=True) from exc
     except TimeoutError as exc:
-        raise JdDetectorError(f"请求 DeepSeek API 超时（{timeout:g} 秒）") from exc
+        raise JdDetectorError(
+            f"请求 DeepSeek API 超时（{timeout:g} 秒）",
+            retryable=True,
+        ) from exc
     except json.JSONDecodeError as exc:
         raise JdDetectorError("DeepSeek API 返回内容不是合法 JSON") from exc
 
@@ -313,63 +343,119 @@ def load_file(path: Path) -> list[JdItem]:
     """读取 .txt 或 .csv 文件，返回待分析的 JD 列表。"""
     if not path.exists():
         raise JdDetectorError(f"文件不存在：{path}")
-    suffix = path.suffix.lower()
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise JdDetectorError(f"读取文件失败：{exc}") from exc
+    return load_bytes(path.name, data)
+
+
+def load_bytes(filename: str, data: bytes) -> list[JdItem]:
+    """从内存字节解析 .txt 或 .csv（GUI 上传文件也复用这里）。"""
+    suffix = Path(filename).suffix.lower()
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise JdDetectorError(f"文件不是合法的 UTF-8 文本：{exc}") from exc
     if suffix == ".csv":
-        return _load_csv(path)
+        return _parse_csv(text)
     if suffix != ".txt":
         shown = suffix or "无扩展名"
         raise JdDetectorError(f"仅支持 .txt 或 .csv 文件，收到 {shown}")
-    try:
-        content = path.read_text(encoding="utf-8-sig")
-    except (OSError, UnicodeDecodeError) as exc:
-        raise JdDetectorError(f"读取文件失败：{exc}") from exc
-    return [JdItem(text=chunk) for chunk in split_jds(content)]
+    return [JdItem(text=chunk) for chunk in split_jds(text)]
 
 
-def _load_csv(path: Path) -> list[JdItem]:
+def _parse_csv(text: str) -> list[JdItem]:
     try:
-        with path.open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle)
-            if not reader.fieldnames:
-                raise JdDetectorError("CSV 文件缺少表头")
-            columns = {name.strip().lower(): name for name in reader.fieldnames}
-            text_column = next((columns[key] for key in _TEXT_COLUMNS if key in columns), None)
-            title_column = next(
-                (columns[key] for key in _TITLE_COLUMNS if key in columns),
-                None,
-            )
-            items: list[JdItem] = []
-            for row in reader:
-                if text_column is not None:
-                    text = str(row.get(text_column) or "").strip()
-                else:
-                    text = " ".join(
-                        str(value).strip() for value in row.values() if value and str(value).strip()
-                    )
-                if not text:
-                    continue
-                title = str(row.get(title_column) or "").strip() if title_column else ""
-                items.append(JdItem(text=text, title=title))
-            return items
+        reader = csv.DictReader(io.StringIO(text))
+        if not reader.fieldnames:
+            raise JdDetectorError("CSV 文件缺少表头")
+        columns = {name.strip().lower(): name for name in reader.fieldnames}
+        text_column = next((columns[key] for key in _TEXT_COLUMNS if key in columns), None)
+        title_column = next(
+            (columns[key] for key in _TITLE_COLUMNS if key in columns),
+            None,
+        )
+        items: list[JdItem] = []
+        for row in reader:
+            if text_column is not None:
+                row_text = str(row.get(text_column) or "").strip()
+            else:
+                row_text = " ".join(
+                    str(value).strip() for value in row.values() if value and str(value).strip()
+                )
+            if not row_text:
+                continue
+            title = str(row.get(title_column) or "").strip() if title_column else ""
+            items.append(JdItem(text=row_text, title=title))
+        return items
     except csv.Error as exc:
         raise JdDetectorError(f"CSV 解析失败：{exc}") from exc
-    except OSError as exc:
-        raise JdDetectorError(f"读取文件失败：{exc}") from exc
 
 
-def analyze_batch(
-    items: list[JdItem],
+def _cache_key(text: str, model: str) -> str:
+    return hashlib.sha256(f"{model}\0{text}".encode()).hexdigest()
+
+
+def _load_cache(path: Path | None) -> dict[str, dict[str, Any]]:
+    if path is None or not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {
+        key: value
+        for key, value in data.items()
+        if isinstance(key, str) and isinstance(value, dict) and "is_sales" in value
+    }
+
+
+def _save_cache(path: Path | None, cache: dict[str, dict[str, Any]]) -> None:
+    if path is None:
+        return
+    try:
+        if path.parent and not path.parent.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        return  # 缓存写入失败不影响主流程
+
+
+def _cached_result(
+    cache: dict[str, dict[str, Any]],
+    item: JdItem,
+    index: int,
+    model: str,
+) -> JdBatchResult | None:
+    value = cache.get(_cache_key(item.text, model))
+    if not isinstance(value, dict) or not isinstance(value.get("is_sales"), bool):
+        return None
+    nature = "销售/地推" if value["is_sales"] else "非销售/地推"
+    return JdBatchResult(
+        index,
+        short_title(item.text, item.title, index),
+        nature,
+        estimate_water_index(item.text),
+        None,
+        True,
+    )
+
+
+def _classify_with_retry(
+    item: JdItem,
     *,
     api_key: str,
-    model: str = DEFAULT_MODEL,
-    base_url: str = DEFAULT_BASE_URL,
-    timeout: float = DEFAULT_TIMEOUT,
-) -> list[JdBatchResult]:
-    """逐条分析 JD；单条失败只记录“分析失败”，不中断整批。"""
-    results: list[JdBatchResult] = []
-    for index, item in enumerate(items, start=1):
-        water = estimate_water_index(item.text)
-        title = short_title(item.text, item.title, index)
+    model: str,
+    base_url: str,
+    timeout: float,
+    retries: int,
+    retry_delay: float,
+) -> tuple[dict[str, Any] | None, str | None]:
+    attempts = max(1, retries + 1)
+    for attempt in range(attempts):
         try:
             result = classify(
                 item.text,
@@ -379,11 +465,82 @@ def analyze_batch(
                 timeout=timeout,
             )
         except JdDetectorError as exc:
-            results.append(JdBatchResult(index, title, "分析失败", water, str(exc)))
-            continue
-        nature = "销售/地推" if result["is_sales"] else "非销售/地推"
-        results.append(JdBatchResult(index, title, nature, water))
-    return results
+            if not exc.retryable or attempt >= attempts - 1:
+                return None, str(exc)
+            if retry_delay > 0:
+                time.sleep(retry_delay * (2**attempt))
+        else:
+            return result, None
+    return None, "未知错误"  # pragma: no cover
+
+
+def analyze_batch(
+    items: list[JdItem],
+    *,
+    api_key: str,
+    model: str = DEFAULT_MODEL,
+    base_url: str = DEFAULT_BASE_URL,
+    timeout: float = DEFAULT_TIMEOUT,
+    workers: int = 1,
+    retries: int = 0,
+    retry_delay: float = 1.0,
+    cache_path: Path | None = None,
+    use_cache: bool = False,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[JdBatchResult]:
+    """逐条分析 JD；单条失败只记录“分析失败”，不中断整批。"""
+    workers = max(1, min(workers, 16))
+    results: list[JdBatchResult | None] = [None] * len(items)
+    cache = _load_cache(cache_path) if use_cache else {}
+    pending: list[tuple[int, JdItem]] = []
+    for offset, item in enumerate(items):
+        cached = _cached_result(cache, item, offset + 1, model) if cache else None
+        if cached is None:
+            pending.append((offset, item))
+        else:
+            results[offset] = cached
+
+    done = len(items) - len(pending)
+    if on_progress is not None:
+        on_progress(done, len(items))
+
+    if pending:
+
+        def work(
+            offset: int, item: JdItem
+        ) -> tuple[int, JdItem, dict[str, Any] | None, str | None]:
+            result, error = _classify_with_retry(
+                item,
+                api_key=api_key,
+                model=model,
+                base_url=base_url,
+                timeout=timeout,
+                retries=retries,
+                retry_delay=retry_delay,
+            )
+            return offset, item, result, error
+
+        with ThreadPoolExecutor(max_workers=min(workers, len(pending))) as executor:
+            futures = [executor.submit(work, offset, item) for offset, item in pending]
+            for future in as_completed(futures):
+                offset, item, result, error = future.result()
+                index = offset + 1
+                title = short_title(item.text, item.title, index)
+                water = estimate_water_index(item.text)
+                if error is not None or result is None:
+                    results[offset] = JdBatchResult(index, title, "分析失败", water, error)
+                else:
+                    nature = "销售/地推" if result["is_sales"] else "非销售/地推"
+                    results[offset] = JdBatchResult(index, title, nature, water)
+                    if use_cache and cache_path is not None:
+                        cache[_cache_key(item.text, model)] = result
+                done += 1
+                if on_progress is not None:
+                    on_progress(done, len(items))
+
+    if use_cache:
+        _save_cache(cache_path, cache)
+    return [result for result in results if result is not None]
 
 
 def _escape_cell(value: str) -> str:
@@ -404,18 +561,45 @@ def render_markdown_table(results: list[JdBatchResult]) -> str:
     return "\n".join(lines)
 
 
+def render_dry_run(items: list[JdItem]) -> str:
+    """渲染 --dry-run 预览：只展示切割结果和本地水分指数。"""
+    lines = [
+        f"将分析 {len(items)} 条 JD（--dry-run，未调用 API）：",
+        "",
+        "| 序号 | 岗位简称 | 水分指数 |",
+        "| --- | --- | --- |",
+    ]
+    for index, item in enumerate(items, start=1):
+        title = _escape_cell(short_title(item.text, item.title, index))
+        lines.append(f"| {index} | {title} | {estimate_water_index(item.text)}/100 |")
+    return "\n".join(lines)
+
+
+def _excel_safe(value: str) -> str:
+    """防止 CSV 注入：Excel 会把 = + - @ 开头的单元格当公式执行。"""
+    if value.lstrip().startswith(_EXCEL_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
+def report_csv_bytes(results: list[JdBatchResult]) -> bytes:
+    """返回可直接下载/写入的 report.csv 内容（UTF-8 BOM）。"""
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer)
+    writer.writerow(REPORT_COLUMNS)
+    writer.writerows(
+        (result.index, _excel_safe(result.title), result.nature, f"{result.water}/100")
+        for result in results
+    )
+    return buffer.getvalue().encode("utf-8-sig")
+
+
 def write_report_csv(results: list[JdBatchResult], path: Path) -> Path:
     """把批量结果写成 Excel 友好的 UTF-8 BOM CSV。"""
     try:
         if path.parent and not path.parent.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8-sig", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(REPORT_COLUMNS)
-            writer.writerows(
-                (result.index, result.title, result.nature, f"{result.water}/100")
-                for result in results
-            )
+        path.write_bytes(report_csv_bytes(results))
     except OSError as exc:
         raise JdDetectorError(f"写入报告失败：{exc}") from exc
     return path
@@ -468,6 +652,46 @@ class JdDetectorTool:
             type=Path,
             default=Path(REPORT_FILENAME),
             help=f"批量分析的 CSV 报告路径，默认 {REPORT_FILENAME}",
+        )
+        parser.add_argument(
+            "--workers",
+            type=int,
+            default=DEFAULT_WORKERS,
+            metavar="N",
+            help=f"批量分析并发数（1-16），默认 {DEFAULT_WORKERS}",
+        )
+        parser.add_argument(
+            "--retries",
+            type=int,
+            default=DEFAULT_RETRIES,
+            metavar="N",
+            help=f"可重试错误（超时/429/5xx）的重试次数，默认 {DEFAULT_RETRIES}",
+        )
+        parser.add_argument(
+            "--retry-delay",
+            type=float,
+            default=1.0,
+            metavar="SECONDS",
+            help="指数退避的基准等待秒数，默认 1.0",
+        )
+        parser.add_argument(
+            "--cache",
+            type=Path,
+            default=DEFAULT_CACHE_PATH,
+            help=f"批量结果缓存路径，默认 {DEFAULT_CACHE_PATH}",
+        )
+        parser.add_argument("--no-cache", action="store_true", help="禁用批量结果缓存")
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="只切割文件并预览将分析的 JD，不调用 API",
+        )
+        parser.add_argument(
+            "--limit",
+            type=int,
+            default=None,
+            metavar="N",
+            help="只分析前 N 条 JD",
         )
         parser.add_argument(
             "--json",
@@ -529,14 +753,31 @@ class JdDetectorTool:
         if args.text is not None:
             print("错误：不能同时指定文本参数和 --file", file=sys.stderr)
             return 1
+        if not 1 <= args.workers <= 16:
+            print("错误：--workers 必须在 1-16 之间", file=sys.stderr)
+            return 2
+        if args.retries < 0:
+            print("错误：--retries 不能为负数", file=sys.stderr)
+            return 2
+        if args.retry_delay < 0:
+            print("错误：--retry-delay 不能为负数", file=sys.stderr)
+            return 2
+        if args.limit is not None and args.limit <= 0:
+            print("错误：--limit 必须大于 0", file=sys.stderr)
+            return 2
         try:
             items = load_file(args.file)
         except JdDetectorError as exc:
             print(f"错误：{exc}", file=sys.stderr)
             return 1
+        if args.limit is not None:
+            items = items[: args.limit]
         if not items:
             print("错误：文件中没有可分析的 JD", file=sys.stderr)
             return 1
+        if args.dry_run:
+            print(render_dry_run(items))
+            return 0
 
         api_key = os.environ.get(API_KEY_ENV, "").strip()
         if not api_key:
@@ -549,11 +790,20 @@ class JdDetectorTool:
             model=args.model,
             base_url=args.base_url,
             timeout=args.timeout,
+            workers=args.workers,
+            retries=args.retries,
+            retry_delay=args.retry_delay,
+            cache_path=None if args.no_cache else args.cache,
+            use_cache=not args.no_cache,
         )
         print(render_markdown_table(results))
         succeeded = sum(1 for result in results if result.error is None)
         failed = len(results) - succeeded
-        print(f"\n共 {len(results)} 条：成功 {succeeded} 条，失败 {failed} 条")
+        summary = f"共 {len(results)} 条：成功 {succeeded} 条，失败 {failed} 条"
+        cached = sum(1 for result in results if result.cached)
+        if cached:
+            summary += f"（缓存命中 {cached} 条）"
+        print(f"\n{summary}")
         try:
             report = write_report_csv(results, args.report)
         except JdDetectorError as exc:

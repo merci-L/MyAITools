@@ -145,7 +145,19 @@ def test_cli_batch_txt(monkeypatch: pytest.MonkeyPatch, capsys, tmp_path: Path) 
     jd_file.write_text("地推专员，负责拉新\n\n研发工程师，负责开发", encoding="utf-8")
     report = tmp_path / "report.csv"
 
-    assert main(["jd-detector", "--file", str(jd_file), "--report", str(report)]) == 0
+    assert (
+        main(
+            [
+                "jd-detector",
+                "--file",
+                str(jd_file),
+                "--report",
+                str(report),
+                "--no-cache",
+            ]
+        )
+        == 0
+    )
 
     out = capsys.readouterr().out
     assert "| 序号 | 岗位简称 | 岗位性质 | 水分指数 |" in out
@@ -166,7 +178,19 @@ def test_cli_batch_partial_failure(monkeypatch: pytest.MonkeyPatch, capsys, tmp_
     jd_file.write_text("地推专员\n\n坏数据\n\n另一个地推专员", encoding="utf-8")
     report = tmp_path / "report.csv"
 
-    assert main(["jd-detector", "--file", str(jd_file), "--report", str(report)]) == 0
+    assert (
+        main(
+            [
+                "jd-detector",
+                "--file",
+                str(jd_file),
+                "--report",
+                str(report),
+                "--no-cache",
+            ]
+        )
+        == 0
+    )
 
     out = capsys.readouterr().out
     assert "分析失败" in out
@@ -191,7 +215,19 @@ def test_cli_batch_csv(monkeypatch: pytest.MonkeyPatch, capsys, tmp_path: Path) 
     )
     report = tmp_path / "report.csv"
 
-    assert main(["jd-detector", "--file", str(csv_file), "--report", str(report)]) == 0
+    assert (
+        main(
+            [
+                "jd-detector",
+                "--file",
+                str(csv_file),
+                "--report",
+                str(report),
+                "--no-cache",
+            ]
+        )
+        == 0
+    )
 
     out = capsys.readouterr().out
     assert "销售代表" in out
@@ -225,3 +261,142 @@ def test_cli_batch_rejects_text_and_file(tmp_path: Path, capsys) -> None:
 
     assert main(["jd-detector", "文本", "--file", str(path)]) == 1
     assert "不能同时指定" in capsys.readouterr().err
+
+
+def test_load_bytes_txt_and_csv() -> None:
+    txt_items = jd_detector.load_bytes("a.txt", "一\n\n二".encode())
+    assert [item.text for item in txt_items] == ["一", "二"]
+
+    csv_items = jd_detector.load_bytes("a.csv", "岗位,职位描述\n地推,负责拉新\n".encode())
+    assert [(item.title, item.text) for item in csv_items] == [("地推", "负责拉新")]
+
+
+def test_load_bytes_rejects_invalid_utf8() -> None:
+    with pytest.raises(jd_detector.JdDetectorError, match="UTF-8"):
+        jd_detector.load_bytes("a.txt", b"\xff\xfe\x00")
+
+
+def test_report_csv_escapes_formula_cells() -> None:
+    results = [jd_detector.JdBatchResult(1, "=SUM(A1)", "销售/地推", 10)]
+    content = jd_detector.report_csv_bytes(results).decode("utf-8-sig")
+    assert "'=SUM(A1)" in content
+
+
+def test_analyze_batch_retries_retryable_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"count": 0}
+
+    def fake_classify(text: str, **kwargs: object) -> dict[str, object]:
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise jd_detector.JdDetectorError("超时", retryable=True)
+        return FAKE_SALES
+
+    monkeypatch.setattr(jd_detector, "classify", fake_classify)
+    results = jd_detector.analyze_batch(
+        [jd_detector.JdItem("销售岗")],
+        api_key="k",
+        retries=2,
+        retry_delay=0,
+    )
+
+    assert results[0].nature == "销售/地推"
+    assert calls["count"] == 3
+
+
+def test_analyze_batch_does_not_retry_permanent_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = {"count": 0}
+
+    def fake_classify(text: str, **kwargs: object) -> dict[str, object]:
+        calls["count"] += 1
+        raise jd_detector.JdDetectorError("HTTP 401")
+
+    monkeypatch.setattr(jd_detector, "classify", fake_classify)
+    results = jd_detector.analyze_batch(
+        [jd_detector.JdItem("销售岗")],
+        api_key="k",
+        retries=2,
+        retry_delay=0,
+    )
+
+    assert results[0].nature == "分析失败"
+    assert calls["count"] == 1
+
+
+def test_analyze_batch_uses_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    calls = {"count": 0}
+
+    def fake_classify(text: str, **kwargs: object) -> dict[str, object]:
+        calls["count"] += 1
+        return FAKE_SALES
+
+    monkeypatch.setattr(jd_detector, "classify", fake_classify)
+    cache = tmp_path / "cache.json"
+    items = [jd_detector.JdItem("销售岗")]
+
+    first = jd_detector.analyze_batch(items, api_key="k", cache_path=cache, use_cache=True)
+    second = jd_detector.analyze_batch(items, api_key="k", cache_path=cache, use_cache=True)
+
+    assert first[0].cached is False
+    assert second[0].cached is True
+    assert calls["count"] == 1
+
+
+def test_analyze_batch_preserves_order_with_workers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(jd_detector, "classify", lambda *args, **kwargs: FAKE_SALES)
+    items = [jd_detector.JdItem(f"销售岗 {number}") for number in range(5)]
+
+    results = jd_detector.analyze_batch(items, api_key="k", workers=4)
+
+    assert [result.index for result in results] == [1, 2, 3, 4, 5]
+    assert all(result.nature == "销售/地推" for result in results)
+
+
+def test_cli_batch_dry_run_skips_api(
+    monkeypatch: pytest.MonkeyPatch, capsys, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        jd_detector,
+        "classify",
+        lambda *args, **kwargs: pytest.fail("dry-run 不应调用 API"),
+    )
+    jd_file = tmp_path / "jds.txt"
+    jd_file.write_text("地推专员\n\n后端工程师", encoding="utf-8")
+
+    assert main(["jd-detector", "--file", str(jd_file), "--dry-run"]) == 0
+
+    out = capsys.readouterr().out
+    assert "将分析 2 条 JD" in out
+    assert "--dry-run" in out
+
+
+def test_cli_batch_limit(monkeypatch: pytest.MonkeyPatch, capsys, tmp_path: Path) -> None:
+    _set_key(monkeypatch)
+    monkeypatch.setattr(jd_detector, "classify", lambda *args, **kwargs: FAKE_SALES)
+    jd_file = tmp_path / "jds.txt"
+    jd_file.write_text("地推专员\n\n另一个地推专员", encoding="utf-8")
+    report = tmp_path / "report.csv"
+
+    assert (
+        main(
+            [
+                "jd-detector",
+                "--file",
+                str(jd_file),
+                "--limit",
+                "1",
+                "--no-cache",
+                "--report",
+                str(report),
+            ]
+        )
+        == 0
+    )
+
+    out = capsys.readouterr().out
+    assert "共 1 条" in out
+    with report.open(encoding="utf-8-sig", newline="") as handle:
+        assert len(list(csv.reader(handle))) == 2

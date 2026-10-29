@@ -16,6 +16,8 @@
 
 ![JD 水分判定：印章、置信度与水分指数](docs/images/jd-verdict.png)
 
+![批量分析：上传、预览、进度与结果表](docs/images/batch-analysis.png)
+
 ## 特性
 
 - **一个工具一个模块**：互不依赖，看得懂、改得动、删得掉
@@ -142,6 +144,21 @@ python -m myaitools jd-detector --file jds.csv --report my-report.csv
 
 终端会打印 Markdown 汇总表（序号 / 岗位简称 / 岗位性质 / 水分指数），同时生成 `report.csv`（UTF-8 BOM，Excel 可直接打开）。某一条 API 超时或报错不会中断整批，对应行会标记为「分析失败」。
 
+批量模式还支持：
+
+```powershell
+# 先预览切割结果，不调用 API（不花钱）
+python -m myaitools jd-detector --file jds.txt --dry-run
+
+# 4 路并发 + 自动重试（超时/429/5xx 指数退避） + 结果缓存
+python -m myaitools jd-detector --file jds.txt --workers 4 --retries 2
+
+# 只分析前 10 条；禁用缓存
+python -m myaitools jd-detector --file jds.txt --limit 10 --no-cache
+```
+
+缓存默认写入 `.cache/jd-detector.json`，重复运行同一批 JD 不会重复调用 API；`report.csv` 中的岗位简称做了 CSV 注入防护，Excel 打开时不会把 `=` 开头的内容当公式执行。
+
 ## 图形界面（Streamlit）
 
 除了命令行，项目还自带一个极简 Web 界面，包含「系统雷达」和「JD 脱水器」两个标签页：
@@ -154,7 +171,7 @@ pip install -e .
 streamlit run src/myaitools/app.py
 ```
 
-浏览器会自动打开 <http://localhost:8501>。系统雷达点击「采集读数」即可查看 CPU / 内存 / 磁盘；JD 脱水器需要先在左侧边栏填写 `DEEPSEEK_API_KEY`（或启动前设置环境变量），粘贴 JD 后点击「开始脱水」，会显示结论、置信度和水分指数。侧边栏的「深色模式」开关可在浅色与深色（夜班档案室）外观之间切换。
+浏览器会自动打开 <http://localhost:8501>。系统雷达点击「采集读数」即可查看 CPU / 内存 / 磁盘；JD 脱水器需要先在左侧边栏填写 `DEEPSEEK_API_KEY`（或启动前设置环境变量），粘贴 JD 后点击「开始脱水」，会显示结论、置信度和水分指数；「批量分析」标签页支持上传 `.txt` / `.csv`，预览切割结果、逐条分析、查看进度，并下载 `report.csv`。侧边栏的「深色模式」开关可在浅色与深色（夜班档案室）外观之间切换。
 
 界面采用「精密档案卡」视觉世界（纸面读数、校准刻度、印章判定），设计 token 见 [DESIGN.md](DESIGN.md)，产品定义见 [PRODUCT.md](PRODUCT.md)。
 

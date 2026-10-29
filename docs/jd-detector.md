@@ -73,6 +73,23 @@ myaitools jd-detector --file jds.csv --report my-report.csv
 - `report.csv` 使用 UTF-8 BOM 编码，Excel 可直接打开；列与终端表格一致
 - 默认报告路径为当前目录的 `report.csv`，可用 `--report` 指定其他路径
 
+批量模式还支持：
+
+```powershell
+# 预览切割结果，不调用 API
+myaitools jd-detector --file jds.txt --dry-run
+
+# 4 路并发 + 可重试错误自动重试（超时 / 429 / 5xx）
+myaitools jd-detector --file jds.txt --workers 4 --retries 2
+
+# 只分析前 10 条；禁用结果缓存
+myaitools jd-detector --file jds.txt --limit 10 --no-cache
+```
+
+- 结果默认缓存到 `.cache/jd-detector.json`（按模型 + JD 文本 hash），重复运行同一批 JD 不会重复计费
+- CSV 中的岗位简称做了公式注入防护，`=` / `+` / `-` / `@` 开头的单元格会被加上 `'` 前缀
+- 可重试错误包括超时、连接失败和 HTTP 408/409/425/429/500/502/503/504；重试采用指数退避
+
 ## 4. 单条输出
 
 默认文本输出：
@@ -100,6 +117,13 @@ myaitools jd-detector --file jds.csv --report my-report.csv
 | `text` | 单条职位描述（位置参数，可省略） | 从标准输入读取 |
 | `-f, --file PATH` | 读取 `.txt` / `.csv` 并进入批量分析 | 无（单条模式） |
 | `--report PATH` | 批量分析的 CSV 报告路径 | `report.csv` |
+| `--workers N` | 批量并发数（1-16） | `4` |
+| `--retries N` | 可重试错误的重试次数 | `2` |
+| `--retry-delay SECONDS` | 指数退避的基准等待秒数 | `1.0` |
+| `--cache PATH` | 批量结果缓存路径 | `.cache/jd-detector.json` |
+| `--no-cache` | 禁用批量结果缓存 | 关闭 |
+| `--dry-run` | 只切割并预览，不调用 API | 关闭 |
+| `--limit N` | 只分析前 N 条 JD | 全部 |
 | `--json` | 单条模式下输出 JSON | 关闭 |
 | `--model NAME` | DeepSeek 模型名 | `deepseek-chat` |
 | `--base-url URL` | API 地址，可替换为兼容网关 | `https://api.deepseek.com` |
@@ -116,7 +140,8 @@ myaitools jd-detector --file jds.csv --report my-report.csv
 ## 7. 工作原理
 
 - 单条模式：调用 DeepSeek 的 OpenAI 兼容接口 `POST {base-url}/chat/completions`
-- 批量模式：本地切割文件 → 逐条调用同一套 `classify()` → 汇总结果 → 写 CSV
+- 批量模式：本地切割文件 → 线程池并发调用同一套 `classify()` → 汇总结果 → 写 CSV
+- 可重试错误按指数退避重试；成功结果按「模型 + JD 文本 hash」缓存，避免重复计费
 - 使用 `response_format={"type": "json_object"}` 约束模型返回 JSON
 - 提示词要求模型返回 `is_sales`、`confidence`、`reason` 三个字段
 - 解析时会去掉 Markdown 代码围栏，并兼容 `"true"` / `"是"` 这类字符串布尔值

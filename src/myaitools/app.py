@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import html
 import os
 from datetime import datetime
@@ -581,6 +582,75 @@ textarea {
   color: var(--muted) !important;
 }
 
+/* ---------- batch tab ---------- */
+[data-testid="stFileUploader"] section {
+  background: var(--sheet);
+  border: 1px dashed var(--rule);
+  border-radius: 2px;
+  padding: 18px;
+}
+[data-testid="stFileUploader"] small,
+[data-testid="stFileUploader"] span {
+  color: var(--muted) !important;
+  font-family: var(--font-ui) !important;
+}
+[data-testid="stDownloadButton"] button {
+  background: transparent !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 2px !important;
+  color: var(--ink) !important;
+  font-family: var(--font-ui) !important;
+  font-size: 13px !important;
+  padding: 9px 18px !important;
+}
+[data-testid="stDownloadButton"] button:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+.batch-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+.batch-table th {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ink);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: left;
+}
+.batch-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+}
+.batch-table .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.batch-table tr.is-failed td:nth-child(3) {
+  color: var(--accent);
+}
+.batch-progress {
+  height: 6px;
+  margin-top: 14px;
+  background: var(--gauge-track);
+}
+.batch-progress-fill {
+  height: 100%;
+  background: var(--ink);
+  transition: width 200ms ease;
+}
+.batch-progress-text {
+  margin: 8px 0 0 !important;
+  font-size: 11px !important;
+  color: var(--muted) !important;
+}
+
 /* ---------- colophon ---------- */
 .colophon {
   display: flex;
@@ -886,6 +956,124 @@ def _show_jd_detector(api_key: str) -> None:
         )
 
 
+def _batch_progress_html(done: int, total: int) -> str:
+    percent = 0 if total == 0 else round(done / total * 100)
+    return (
+        f'<div class="batch-progress"><div class="batch-progress-fill" '
+        f'style="width:{percent}%"></div></div>'
+        f'<p class="batch-progress-text">已完成 {done}/{total}</p>'
+    )
+
+
+def _batch_preview_html(items: list[jd_detector.JdItem]) -> str:
+    rows = []
+    for index, item in enumerate(items, start=1):
+        title = html.escape(jd_detector.short_title(item.text, item.title, index))
+        water = jd_detector.estimate_water_index(item.text)
+        rows.append(
+            f'<tr><td class="num">{index}</td><td>{title}</td><td class="num">{water}/100</td></tr>'
+        )
+    return (
+        '<table class="batch-table"><thead><tr>'
+        '<th class="num">序号</th><th>岗位简称</th><th class="num">水分指数</th>'
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+    )
+
+
+def _batch_result_html(results: list[jd_detector.JdBatchResult]) -> str:
+    rows = []
+    for result in results:
+        state = " is-failed" if result.error else ""
+        rows.append(
+            f'<tr class="{state}"><td class="num">{result.index}</td>'
+            f"<td>{html.escape(result.title)}</td>"
+            f"<td>{html.escape(result.nature)}</td>"
+            f'<td class="num">{result.water}/100</td></tr>'
+        )
+    return (
+        '<table class="batch-table"><thead><tr>'
+        '<th class="num">序号</th><th>岗位简称</th><th>岗位性质</th>'
+        '<th class="num">水分指数</th>'
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+    )
+
+
+def _show_batch(api_key: str) -> None:
+    st.markdown(
+        '<h2 class="sheet-title">批量分析</h2>'
+        '<p class="sheet-caption">上传 .txt 或 .csv，自动切割为多条 JD，'
+        "逐条判定岗位性质并估算水分指数。</p>",
+        unsafe_allow_html=True,
+    )
+    upload = st.file_uploader("上传 JD 文件", type=["txt", "csv"], key="batch-upload")
+    if upload is None:
+        _empty("尚无文件", "上传 .txt 或 .csv 后，这里会先预览切割结果，再开始批量分析。")
+        return
+    try:
+        items = jd_detector.load_bytes(upload.name, upload.getvalue())
+    except jd_detector.JdDetectorError as exc:
+        _notice("error", "文件读取失败", str(exc))
+        return
+    if not items:
+        _notice("error", "没有可分析的 JD", "文件中没有切出 JD，请检查空行或 --- 分隔。")
+        return
+
+    digest = hashlib.sha256(upload.getvalue()).hexdigest()[:16]
+    st.markdown(
+        f'<p class="sheet-caption">共切出 {len(items)} 条 JD；'
+        "下面是本地水分指数预览，尚未调用 API。</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(_batch_preview_html(items), unsafe_allow_html=True)
+
+    if st.button("开始批量分析", type="primary", key="batch-run"):
+        if not api_key.strip():
+            _notice("error", "未配置 API Key", "请先在左侧填写 DeepSeek API Key。")
+        else:
+            bar = st.empty()
+            bar.markdown(_batch_progress_html(0, len(items)), unsafe_allow_html=True)
+
+            def on_progress(done: int, total: int) -> None:
+                bar.markdown(_batch_progress_html(done, total), unsafe_allow_html=True)
+
+            with st.spinner("正在逐条分析…"):
+                try:
+                    results = jd_detector.analyze_batch(
+                        items,
+                        api_key=api_key.strip(),
+                        workers=4,
+                        retries=2,
+                        cache_path=None,
+                        use_cache=False,
+                        on_progress=on_progress,
+                    )
+                except jd_detector.JdDetectorError as exc:
+                    _notice("error", "批量分析失败", str(exc))
+                else:
+                    st.session_state["batch_result"] = {
+                        "digest": digest,
+                        "results": results,
+                    }
+
+    saved = st.session_state.get("batch_result")
+    if saved and saved.get("digest") == digest:
+        results = saved["results"]
+        succeeded = sum(1 for result in results if result.error is None)
+        st.markdown(
+            f'<p class="sheet-caption">共 {len(results)} 条：成功 {succeeded} 条，'
+            f"失败 {len(results) - succeeded} 条。</p>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(_batch_result_html(results), unsafe_allow_html=True)
+        st.download_button(
+            "下载 report.csv",
+            data=jd_detector.report_csv_bytes(results),
+            file_name="report.csv",
+            mime="text/csv",
+            key="batch-download",
+        )
+
+
 def main() -> None:
     """页面入口。"""
     st.set_page_config(
@@ -933,11 +1121,13 @@ def main() -> None:
             help="在浅色与深色档案室之间切换。",
         )
 
-    sys_tab, jd_tab = st.tabs(["系统雷达", "JD 脱水器"])
+    sys_tab, jd_tab, batch_tab = st.tabs(["系统雷达", "JD 脱水器", "批量分析"])
     with sys_tab:
         _show_sys_radar()
     with jd_tab:
         _show_jd_detector(api_key)
+    with batch_tab:
+        _show_batch(api_key)
 
     st.markdown(
         '<div class="colophon"><span>MyAITools · 本地工具</span>'

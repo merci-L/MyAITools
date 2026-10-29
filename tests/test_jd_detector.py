@@ -171,7 +171,19 @@ def test_cli_batch_file_outputs_table_and_report(
     )
     report = tmp_path / "report.csv"
 
-    assert main(["jd-detector", "--file", str(jd_file), "--report", str(report)]) == 0
+    assert (
+        main(
+            [
+                "jd-detector",
+                "--file",
+                str(jd_file),
+                "--report",
+                str(report),
+                "--no-cache",
+            ]
+        )
+        == 0
+    )
     out = capsys.readouterr().out
     assert "| 序号 | 岗位简称 | 岗位性质 | 水分指数 |" in out
     assert "| 1 |" in out

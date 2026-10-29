@@ -10,8 +10,10 @@
 ### 新增
 
 - `jd-detector` 支持 `--file` 批量流水线：读取 `.txt` / `.csv`，自动按空行或 `---` 切割 JD 并逐条分析
-- 批量分析在终端输出 Markdown 汇总表（序号 / 岗位简称 / 岗位性质 / 水分指数），并生成 `report.csv`（UTF-8 BOM，Excel 可直接打开）
+- 批量分析支持 `--workers` 并发、`--retries` 指数退避重试（超时 / 429 / 5xx）、`--no-cache` 缓存开关、`--dry-run` 预览与 `--limit` 条数限制
+- 批量分析在终端输出 Markdown 汇总表（序号 / 岗位简称 / 岗位性质 / 水分指数），并生成 `report.csv`（UTF-8 BOM，Excel 可直接打开；已做 CSV 公式注入防护）
 - 单条 JD 分析失败不会中断整批，结果标记为「分析失败」；可用 `--report` 指定报告路径
+- 新增 Streamlit「批量分析」标签页：上传 `.txt` / `.csv`、预览切割结果、进度条、结果表格与 `report.csv` 下载
 - 新增 Streamlit 图形界面 `app.py`：包含「系统雷达」和「JD 脱水器」两个标签页，JD 脱水器展示结论、置信度与水分指数
 - 新增 Release 自动发布工作流：推送 `v*` 标签后自动提取 `CHANGELOG.md` 内容创建 GitHub Release
 
@@ -25,7 +27,8 @@
 
 ### 文档
 
-- README、`docs/jd-detector.md` 增加批量分析用法与 `report.csv` 说明
+- README、`docs/jd-detector.md` 增加批量分析用法、并发/重试/缓存参数与 `report.csv` 说明
+- CI 扩展为 Ubuntu / Windows / macOS 跨平台矩阵，并启用 Dependabot 依赖更新
 - README 增加 Release / CI / License 徽章，并补充从 GitHub 直接安装的说明
 - README 增加图形界面启动说明
 - 新增 `PRODUCT.md` 与 `DESIGN.md`，记录产品定义与设计 token

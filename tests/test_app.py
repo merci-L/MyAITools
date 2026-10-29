@@ -29,13 +29,18 @@ def test_app_renders_masthead_tabs_and_buttons() -> None:
     assert "MYAITOOLS" in text
     assert "<h1" in text
     assert "Catalogue 002" in text
-    assert [tab.label for tab in app.tabs] == ["系统雷达", "JD 脱水器"]
+    assert [tab.label for tab in app.tabs] == ["系统雷达", "JD 脱水器", "批量分析"]
     assert [button.label for button in app.button] == ["采集读数", "开始脱水"]
 
 
 def test_sys_radar_empty_state() -> None:
     app = _run_app()
     assert "尚无读数" in _markdown_text(app)
+
+
+def test_batch_tab_empty_state() -> None:
+    app = _run_app()
+    assert "尚无文件" in _markdown_text(app)
 
 
 def test_dark_mode_toggle_switches_palette() -> None:
